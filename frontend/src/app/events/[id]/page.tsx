@@ -18,7 +18,12 @@ export default async function EventPage({ params }: { params: Promise<Params> })
       <p className="muted">
         {t(lang, "venueLabel")}: {seatData.venue.name}
       </p>
-      <EventBookingPanel eventId={eventId} seats={seatData.seats} priceTiers={seatData.price_tiers} />
+      <EventBookingPanel
+        eventId={eventId}
+        seats={seatData.seats}
+        priceTiers={seatData.price_tiers}
+        layoutMeta={seatData.venue.layout_meta}
+      />
     </div>
   );
 }

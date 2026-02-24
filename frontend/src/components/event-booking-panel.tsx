@@ -10,9 +10,10 @@ type Props = {
   eventId: number;
   seats: SeatItem[];
   priceTiers: Record<string, number>;
+  layoutMeta: Record<string, unknown>;
 };
 
-export default function EventBookingPanel({ eventId, seats, priceTiers }: Props) {
+export default function EventBookingPanel({ eventId, seats, priceTiers, layoutMeta }: Props) {
   const router = useRouter();
   const { tr } = useAppSettings();
   const [selectedSeatIds, setSelectedSeatIds] = useState<number[]>([]);
@@ -58,6 +59,7 @@ export default function EventBookingPanel({ eventId, seats, priceTiers }: Props)
         selectedSeatIds={selectedSeatIds}
         onToggleSeat={toggleSeat}
         priceTiers={priceTiers}
+        layoutMeta={layoutMeta}
       />
       <div className="card space-y-3 p-4">
         <h3 className="font-semibold">{tr("yourDetails")}</h3>

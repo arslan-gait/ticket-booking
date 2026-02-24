@@ -102,6 +102,8 @@ export const dictionary = {
     bookedSeat: "Забронировано",
     paidSeat: "Оплачено",
     selectedSeat: "Выбрано",
+    takenPlaces: "Занятые места",
+    noTakenPlaces: "Нет занятых мест",
   },
   en: {
     brand: "Tickets",
@@ -195,6 +197,8 @@ export const dictionary = {
     bookedSeat: "Booked",
     paidSeat: "Paid",
     selectedSeat: "Selected",
+    takenPlaces: "Taken seats",
+    noTakenPlaces: "No taken seats",
   },
 } as const;
 

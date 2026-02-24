@@ -24,10 +24,10 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py runserver
+python manage.py runserver 127.0.0.1:8008
 ```
 
-Backend runs at `http://localhost:8000`.
+Backend runs at `http://127.0.0.1:8008`.
 
 ## Frontend Setup
 
@@ -42,7 +42,7 @@ Frontend runs at `http://localhost:3000`.
 Set API URL (optional, default already points to local backend):
 
 ```bash
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8008/api
 ```
 
 ## Run Both With mprocs
