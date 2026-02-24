@@ -20,7 +20,7 @@ export default async function RootLayout({
     <html lang={initialLang} data-theme={initialTheme}>
       <body>
         <AppSettingsProvider initialLang={initialLang} initialTheme={initialTheme}>
-          <header className="border-b border-[var(--border)]">
+          <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--background)]/95 backdrop-blur">
             <TopbarMenu />
           </header>
           <main className="mx-auto max-w-6xl p-4">{children}</main>
