@@ -1,44 +1,46 @@
 import Link from "next/link";
 import { getBooking } from "@/lib/api";
+import { t } from "@/lib/i18n";
+import { getServerLanguage } from "@/lib/i18n-server";
 
 type Params = { id: string };
 
 export default async function BookingPage({ params }: { params: Promise<Params> }) {
+  const lang = await getServerLanguage();
   const { id } = await params;
   const booking = await getBooking(Number(id));
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Booking #{booking.id}</h1>
+      <h1 className="text-2xl font-bold">
+        {t(lang, "booking")} #{booking.id}
+      </h1>
       <div className="card space-y-2 p-4">
         <p>
-          Name: <b>{booking.customer_name}</b>
+          {t(lang, "name")}: <b>{booking.customer_name}</b>
         </p>
         <p>
-          WhatsApp: <b>{booking.phone_number}</b>
+          {t(lang, "whatsapp")}: <b>{booking.phone_number}</b>
         </p>
         <p>
-          Event: <b>{booking.event_name}</b>
+          {t(lang, "event")}: <b>{booking.event_name}</b>
         </p>
         <p>
-          Venue: <b>{booking.venue_name}</b>
+          {t(lang, "venue")}: <b>{booking.venue_name}</b>
         </p>
         <p>
-          Status: <b>{booking.status}</b>
+          {t(lang, "status")}: <b>{booking.status}</b>
         </p>
         <p>
-          Total: <b>${booking.total_price}</b>
+          {t(lang, "total")}: <b>${booking.total_price}</b>
         </p>
       </div>
       <div className="card p-4">
-        <h2 className="mb-2 text-lg font-semibold">Manual payment instructions</h2>
-        <p className="text-sm text-slate-300">
-          Please send payment to our payment account and message our admin on WhatsApp. After payment
-          confirmation, your booking status will change to <b>paid</b>, and you can open your QR ticket.
-        </p>
+        <h2 className="mb-2 text-lg font-semibold">{t(lang, "manualPaymentTitle")}</h2>
+        <p className="muted text-sm">{t(lang, "manualPaymentText")}</p>
       </div>
       <Link className="button button-primary inline-block" href={`/ticket/${booking.id}`}>
-        Open ticket page
+        {t(lang, "openTicketPage")}
       </Link>
     </div>
   );

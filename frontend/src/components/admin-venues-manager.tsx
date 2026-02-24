@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import VenueEditor from "@/components/venue-editor";
 import { createVenue, getVenue, getVenues, updateVenue, type VenueListItem } from "@/lib/api";
+import { useAppSettings } from "@/components/app-settings-provider";
 
 type SeatDraft = {
   label: string;
@@ -14,10 +15,42 @@ type SeatDraft = {
   seat_type: string;
 };
 
+type LayoutMetaDraft = {
+  width?: number;
+  height?: number;
+  background?: string;
+  type_colors?: Record<string, string>;
+  stage?: {
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    label?: string;
+    background?: string;
+    color?: string;
+  };
+};
+
 const defaultLayout = {
   width: 900,
   height: 500,
-  background: "#0f172a",
+  background: "#f8fafc",
+  type_colors: {
+    regular: "#2563eb",
+    vip: "#f59e0b",
+    balcony: "#facc15",
+    box: "#64748b",
+    box_upper: "#14b8a6",
+  },
+  stage: {
+    x: 120,
+    y: 20,
+    width: 660,
+    height: 64,
+    label: "СЦЕНА",
+    background: "#1e293b",
+    color: "#f8fafc",
+  },
 };
 
 function parseJson<T>(value: string, fallback: T): T {
@@ -29,6 +62,7 @@ function parseJson<T>(value: string, fallback: T): T {
 }
 
 export default function AdminVenuesManager() {
+  const { tr } = useAppSettings();
   const [venues, setVenues] = useState<VenueListItem[]>([]);
   const [selectedVenueId, setSelectedVenueId] = useState<string>("");
   const [name, setName] = useState("");
@@ -39,6 +73,8 @@ export default function AdminVenuesManager() {
   const [saving, setSaving] = useState(false);
 
   const parsedSeats = useMemo(() => parseJson<SeatDraft[]>(seatsJson, []), [seatsJson]);
+  const parsedLayoutMeta = useMemo(() => parseJson<LayoutMetaDraft>(layoutMeta, defaultLayout), [layoutMeta]);
+  const hasSeatsJson = seatsJson.trim().length > 0 && seatsJson.trim() !== "[]";
 
   async function reloadVenues() {
     const data = await getVenues();
@@ -102,7 +138,7 @@ export default function AdminVenuesManager() {
         layout_meta: parseJson<Record<string, unknown>>(layoutMeta, defaultLayout),
         seats: parseJson<SeatDraft[]>(seatsJson, []),
       };
-      if (!name.trim()) throw new Error("Venue name is required.");
+      if (!name.trim()) throw new Error(tr("venueNameRequired"));
 
       if (selectedVenueId) {
         await updateVenue(Number(selectedVenueId), payload);
@@ -129,71 +165,79 @@ export default function AdminVenuesManager() {
   return (
     <div className="space-y-4">
       <div className="card space-y-3 p-4">
-        <h2 className="text-lg font-semibold">Venue editor</h2>
+        <h2 className="text-lg font-semibold">{tr("venueEditor")}</h2>
         <div className="flex gap-2">
           <select
-            className="w-full rounded border border-slate-600 bg-slate-900 p-2"
+            className="input-field"
             value={selectedVenueId}
             onChange={(e) => {
               setSelectedVenueId(e.target.value);
               loadVenue(e.target.value).catch((err) => setError(String(err)));
             }}
           >
-            <option value="">Create new venue</option>
+            <option value="">{tr("createNewVenue")}</option>
             {venues.map((venue) => (
               <option key={venue.id} value={venue.id}>
-                {venue.name} ({venue.seat_count} seats)
+                {venue.name} ({venue.seat_count} {tr("seatsCount")})
               </option>
             ))}
           </select>
           <button className="button button-secondary" onClick={resetForm}>
-            New
+            {tr("new")}
           </button>
         </div>
 
         <input
-          className="w-full rounded border border-slate-600 bg-slate-900 p-2"
-          placeholder="Venue name"
+          className="input-field"
+          placeholder={tr("venueName")}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
         <textarea
-          className="min-h-20 w-full rounded border border-slate-600 bg-slate-900 p-2"
-          placeholder="Description"
+          className="input-field min-h-20"
+          placeholder={tr("description")}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
-        <p className="text-sm text-slate-300">Layout metadata JSON</p>
+        <p className="muted text-sm">{tr("layoutMeta")}</p>
         <textarea
-          className="min-h-28 w-full rounded border border-slate-600 bg-slate-900 p-2 font-mono text-xs"
+          className="input-field min-h-28 font-mono text-xs"
           value={layoutMeta}
           onChange={(e) => setLayoutMeta(e.target.value)}
         />
         <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-300">Seats JSON array</p>
-          <button className="button button-secondary" onClick={generateGrid}>
-            Generate 48-seat grid
-          </button>
+          <p className="muted text-sm">{tr("seatsJson")}</p>
+          {!hasSeatsJson ? (
+            <button className="button button-secondary" onClick={generateGrid}>
+              {tr("generateGrid")}
+            </button>
+          ) : null}
         </div>
         <textarea
-          className="min-h-48 w-full rounded border border-slate-600 bg-slate-900 p-2 font-mono text-xs"
+          className="input-field min-h-48 font-mono text-xs"
           value={seatsJson}
           onChange={(e) => setSeatsJson(e.target.value)}
         />
         <button className="button button-primary" onClick={saveVenue} disabled={saving}>
-          {saving ? "Saving..." : selectedVenueId ? "Update venue" : "Create venue"}
+          {saving ? tr("saving") : selectedVenueId ? tr("updateVenue") : tr("createVenueBtn")}
         </button>
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
       </div>
 
       <div className="card p-4">
-        <h2 className="mb-2 text-lg font-semibold">Seat map preview</h2>
+        <h2 className="mb-2 text-lg font-semibold">{tr("seatPreview")}</h2>
         <VenueEditor
+          layoutMeta={parsedLayoutMeta}
+          rowPrefix={tr("row")}
           seats={parsedSeats.map((seat, idx) => ({
             id: idx + 1,
             label: seat.label || `S${idx + 1}`,
             cx: Number(seat.cx) || 0,
             cy: Number(seat.cy) || 0,
+            rowLabel: seat.row_label || "",
+            seatNumber: Number.isFinite(Number(seat.seat_number)) ? String(seat.seat_number) : "",
+            section: seat.section || "",
+            seatType: seat.seat_type || "regular",
           }))}
         />
       </div>

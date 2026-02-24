@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBooking, type SeatItem } from "@/lib/api";
 import SeatPicker from "@/components/seat-picker";
+import { useAppSettings } from "@/components/app-settings-provider";
 
 type Props = {
   eventId: number;
@@ -13,6 +14,7 @@ type Props = {
 
 export default function EventBookingPanel({ eventId, seats, priceTiers }: Props) {
   const router = useRouter();
+  const { tr } = useAppSettings();
   const [selectedSeatIds, setSelectedSeatIds] = useState<number[]>([]);
   const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
@@ -58,21 +60,21 @@ export default function EventBookingPanel({ eventId, seats, priceTiers }: Props)
         priceTiers={priceTiers}
       />
       <div className="card space-y-3 p-4">
-        <h3 className="font-semibold">Your details</h3>
+        <h3 className="font-semibold">{tr("yourDetails")}</h3>
         <input
-          className="w-full rounded border border-slate-600 bg-slate-900 p-2"
-          placeholder="Full name"
+          className="input-field"
+          placeholder={tr("fullName")}
           value={customerName}
           onChange={(e) => setCustomerName(e.target.value)}
         />
         <input
-          className="w-full rounded border border-slate-600 bg-slate-900 p-2"
-          placeholder="WhatsApp number"
+          className="input-field"
+          placeholder={tr("whatsappNumber")}
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
         />
         <button className="button button-primary" disabled={!canSubmit || loading} onClick={submit}>
-          {loading ? "Creating booking..." : "Confirm booking"}
+          {loading ? tr("createBooking") : tr("confirmBooking")}
         </button>
         {error && <p className="text-sm text-red-400">{error}</p>}
       </div>

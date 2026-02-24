@@ -3,6 +3,7 @@
 import { Html5Qrcode } from "html5-qrcode";
 import { useEffect, useRef, useState } from "react";
 import { verifyQr } from "@/lib/api";
+import { useAppSettings } from "@/components/app-settings-provider";
 
 type ResultState = {
   valid: boolean;
@@ -10,6 +11,7 @@ type ResultState = {
 };
 
 export default function QrScanner() {
+  const { tr } = useAppSettings();
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [result, setResult] = useState<ResultState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -28,12 +30,12 @@ export default function QrScanner() {
           try {
             const res = await verifyQr(decodedText);
             if (res.valid) {
-              setResult({ valid: true, message: "Ticket is valid and marked as used." });
+              setResult({ valid: true, message: tr("qrValidUsed") });
             } else {
-              setResult({ valid: false, message: res.error ?? "Invalid ticket." });
+              setResult({ valid: false, message: res.error ?? tr("invalidTicket") });
             }
           } catch (error) {
-            setResult({ valid: false, message: `Scan failed: ${String(error)}` });
+            setResult({ valid: false, message: `${tr("scanFailed")}: ${String(error)}` });
           } finally {
             setBusy(false);
           }
@@ -41,7 +43,7 @@ export default function QrScanner() {
         () => {},
       )
       .catch((error) => {
-        setResult({ valid: false, message: `Could not start camera: ${String(error)}` });
+        setResult({ valid: false, message: `${tr("cameraStartFailed")}: ${String(error)}` });
       });
 
     return () => {
@@ -50,7 +52,7 @@ export default function QrScanner() {
         .then(() => scanner.clear())
         .catch(() => {});
     };
-  }, [busy]);
+  }, [busy, tr]);
 
   return (
     <div className="space-y-4">

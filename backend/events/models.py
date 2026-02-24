@@ -16,12 +16,6 @@ class Venue(models.Model):
 
 
 class Seat(models.Model):
-    SEAT_TYPES = [
-        ('regular', 'Regular'),
-        ('vip', 'VIP'),
-        ('balcony', 'Balcony'),
-    ]
-
     venue = models.ForeignKey(Venue, on_delete=models.CASCADE, related_name='seats')
     label = models.CharField(max_length=50, blank=True, default='')
     cx = models.FloatField(help_text='X coordinate on canvas')
@@ -29,7 +23,7 @@ class Seat(models.Model):
     section = models.CharField(max_length=100, blank=True, default='')
     row_label = models.CharField(max_length=50, blank=True, default='')
     seat_number = models.IntegerField(default=0)
-    seat_type = models.CharField(max_length=50, choices=SEAT_TYPES, default='regular')
+    seat_type = models.CharField(max_length=50, default='regular')
 
     class Meta:
         ordering = ['section', 'row_label', 'seat_number']

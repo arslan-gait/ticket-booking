@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import AppSettingsProvider from "@/components/app-settings-provider";
+import TopbarMenu from "@/components/topbar-menu";
+import { getServerLanguage, getServerTheme } from "@/lib/i18n-server";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -7,27 +9,22 @@ export const metadata: Metadata = {
   description: "Event ticket booking app",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [initialLang, initialTheme] = await Promise.all([getServerLanguage(), getServerTheme()]);
+
   return (
-    <html lang="en">
+    <html lang={initialLang} data-theme={initialTheme}>
       <body>
-        <header className="border-b border-slate-700">
-          <nav className="mx-auto flex max-w-6xl items-center justify-between p-4">
-            <Link href="/" className="font-bold text-xl">
-              TicketHub
-            </Link>
-            <div className="flex gap-4 text-sm">
-              <Link href="/">Events</Link>
-              <Link href="/admin">Admin</Link>
-              <Link href="/admin/scan">Scan QR</Link>
-            </div>
-          </nav>
-        </header>
-        <main className="mx-auto max-w-6xl p-4">{children}</main>
+        <AppSettingsProvider initialLang={initialLang} initialTheme={initialTheme}>
+          <header className="border-b border-[var(--border)]">
+            <TopbarMenu />
+          </header>
+          <main className="mx-auto max-w-6xl p-4">{children}</main>
+        </AppSettingsProvider>
       </body>
     </html>
   );

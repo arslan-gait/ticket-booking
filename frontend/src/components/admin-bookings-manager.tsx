@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { getBookings, updateBookingStatus, type BookingListItem } from "@/lib/api";
+import { useAppSettings } from "@/components/app-settings-provider";
 
 export default function AdminBookingsManager() {
+  const { tr } = useAppSettings();
   const [bookings, setBookings] = useState<BookingListItem[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [error, setError] = useState("");
@@ -30,18 +32,18 @@ export default function AdminBookingsManager() {
     <div className="space-y-4">
       <div className="card flex items-center gap-2 p-4">
         <label htmlFor="status" className="text-sm">
-          Filter status:
+          {tr("filterStatus")}:
         </label>
         <select
           id="status"
-          className="rounded border border-slate-600 bg-slate-900 p-2"
+          className="input-field w-auto"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
-          <option value="">All</option>
-          <option value="pending">pending</option>
-          <option value="paid">paid</option>
-          <option value="cancelled">cancelled</option>
+          <option value="">{tr("all")}</option>
+          <option value="pending">{tr("pending")}</option>
+          <option value="paid">{tr("paid")}</option>
+          <option value="cancelled">{tr("cancelled")}</option>
         </select>
       </div>
       <div className="space-y-2">
@@ -52,13 +54,16 @@ export default function AdminBookingsManager() {
                 <p className="font-semibold">
                   #{booking.id} · {booking.customer_name}
                 </p>
-                <p className="text-sm text-slate-300">
+                <p className="muted text-sm">
                   {booking.event_name} · {new Date(booking.event_date).toLocaleString()}
                 </p>
-                <p className="text-sm text-slate-300">
-                  {booking.phone_number} · seats: {booking.seat_count} · total: ${booking.total_price}
+                <p className="muted text-sm">
+                  {booking.phone_number} · {tr("seatsCount")}: {booking.seat_count} · {tr("total")}: $
+                  {booking.total_price}
                 </p>
-                <p className="text-xs text-slate-400">status: {booking.status}</p>
+                <p className="muted text-xs">
+                  {tr("status")}: {booking.status}
+                </p>
               </div>
               <div className="flex gap-2">
                 <button
@@ -66,14 +71,14 @@ export default function AdminBookingsManager() {
                   disabled={booking.status === "paid"}
                   onClick={() => markStatus(booking.id, "paid")}
                 >
-                  Mark paid
+                  {tr("markPaid")}
                 </button>
                 <button
                   className="button button-secondary"
                   disabled={booking.status === "cancelled"}
                   onClick={() => markStatus(booking.id, "cancelled")}
                 >
-                  Cancel
+                  {tr("cancel")}
                 </button>
               </div>
             </div>

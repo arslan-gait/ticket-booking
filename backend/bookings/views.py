@@ -85,6 +85,26 @@ def create_booking(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    missing_price_types = sorted({seat.seat_type for seat in seats if seat.seat_type not in event.price_tiers})
+    if missing_price_types:
+        return Response(
+            {
+                'error': 'Missing seat type prices for this event.',
+                'missing_seat_types': missing_price_types,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    seat_price_map = {}
+    try:
+        for seat_type, raw_price in event.price_tiers.items():
+            seat_price_map[seat_type] = Decimal(str(raw_price))
+    except Exception:
+        return Response(
+            {'error': 'Event price tiers contain invalid values.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     with transaction.atomic():
         taken_seats = (
             BookingItem.objects
@@ -108,7 +128,7 @@ def create_booking(request):
 
         total = Decimal('0')
         for seat in seats:
-            price = Decimal(str(event.price_tiers.get(seat.seat_type, 0)))
+            price = seat_price_map[seat.seat_type]
             total += price
 
         booking = Booking.objects.create(
@@ -121,7 +141,7 @@ def create_booking(request):
 
         items = []
         for seat in seats:
-            price = Decimal(str(event.price_tiers.get(seat.seat_type, 0)))
+            price = seat_price_map[seat.seat_type]
             items.append(
                 BookingItem(
                     booking=booking,
