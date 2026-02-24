@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAppSettings } from "@/components/app-settings-provider";
 
 export default function TopbarMenu() {
-  const router = useRouter();
   const pathname = usePathname();
-  const { theme, toggleTheme, tr } = useAppSettings();
+  const { tr } = useAppSettings();
   const navItems = [
     { href: "/", label: tr("navEvents") },
     { href: "/admin", label: tr("navAdmin") },
@@ -16,11 +15,6 @@ export default function TopbarMenu() {
   function isActivePath(href: string): boolean {
     if (href === "/") return pathname === "/";
     return pathname === href || pathname.startsWith(`${href}/`);
-  }
-
-  function handleThemeToggle() {
-    toggleTheme();
-    router.refresh();
   }
 
   return (
@@ -46,16 +40,6 @@ export default function TopbarMenu() {
             </Link>
           );
         })}
-      </div>
-      <div className="order-2 ml-auto flex items-center gap-2 sm:order-3">
-        <button
-          className="button button-secondary h-9 px-3 text-sm whitespace-nowrap"
-          onClick={handleThemeToggle}
-          aria-label={theme === "light" ? tr("switchToDark") : tr("switchToLight")}
-          title={theme === "light" ? tr("switchToDark") : tr("switchToLight")}
-        >
-          {theme === "light" ? tr("darkMode") : tr("lightMode")}
-        </button>
       </div>
     </nav>
   );
