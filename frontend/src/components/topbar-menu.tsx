@@ -12,7 +12,6 @@ export default function TopbarMenu() {
   const navItems = [
     { href: "/", label: tr("navEvents") },
     { href: "/admin", label: tr("navAdmin") },
-    { href: "/admin/scan", label: tr("navScan") },
   ];
 
   function isActivePath(href: string): boolean {

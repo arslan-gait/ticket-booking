@@ -23,8 +23,8 @@ export default async function RootLayout({
   const [initialLang, initialTheme] = await Promise.all([getServerLanguage(), getServerTheme()]);
 
   return (
-    <html lang={initialLang} data-theme={initialTheme}>
-      <body>
+    <html lang={initialLang} data-theme={initialTheme} suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <AppSettingsProvider initialLang={initialLang} initialTheme={initialTheme}>
           <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--background)]/95 backdrop-blur">
             <TopbarMenu />

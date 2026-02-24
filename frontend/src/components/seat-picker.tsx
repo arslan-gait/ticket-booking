@@ -94,19 +94,22 @@ export default function SeatPicker({
       .filter((s) => selectedSeatIds.includes(s.id))
       .reduce((sum, s) => sum + getSeatPrice(s, priceTiers), 0);
   }, [seats, selectedSeatIds, priceTiers]);
-  const takenSeats = useMemo(
-    () =>
-      seats
-        .filter((seat) => seat.status === "booked" || seat.status === "paid")
-        .sort((a, b) => {
-          const sectionCompare = (a.section || "").localeCompare(b.section || "", undefined, { numeric: true });
-          if (sectionCompare !== 0) return sectionCompare;
-          const rowCompare = (a.row_label || "").localeCompare(b.row_label || "", undefined, { numeric: true });
-          if (rowCompare !== 0) return rowCompare;
-          return a.seat_number - b.seat_number;
-        }),
-    [seats],
-  );
+  const sectorOccupancy = useMemo(() => {
+    const sectionMap = new Map<string, { section: string; total: number; taken: number }>();
+    for (const seat of seats) {
+      const section = seat.section?.trim() || "General";
+      const current = sectionMap.get(section) ?? { section, total: 0, taken: 0 };
+      current.total += 1;
+      if (seat.status === "booked" || seat.status === "paid") {
+        current.taken += 1;
+      }
+      sectionMap.set(section, current);
+    }
+
+    return Array.from(sectionMap.values())
+      .filter((item) => item.taken > 0)
+      .sort((a, b) => a.section.localeCompare(b.section, undefined, { numeric: true }));
+  }, [seats]);
   const selectedSeats = useMemo(
     () =>
       seats
@@ -509,15 +512,18 @@ export default function SeatPicker({
       {adminView ? (
         <div className="card p-3 text-sm">
           <p className="mb-2 font-semibold">{tr("takenPlaces")}</p>
-          {takenSeats.length === 0 ? (
+          {sectorOccupancy.length === 0 ? (
             <p className="muted">{tr("noTakenPlaces")}</p>
           ) : (
             <div className="flex flex-wrap gap-2 text-sm">
-              {takenSeats.map((seat) => (
-                <span key={`taken-${seat.id}`} className="rounded border border-[var(--border)] px-2 py-1">
-                  {formatSeatLabel(seat)}
+              {sectorOccupancy.map((sector) => {
+                const percent = sector.total > 0 ? Math.round((sector.taken / sector.total) * 100) : 0;
+                return (
+                <span key={`taken-${sector.section}`} className="rounded border border-[var(--border)] px-2 py-1">
+                  {sector.section}: {sector.taken}/{sector.total} ({percent}%)
                 </span>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
