@@ -45,6 +45,15 @@ body {
   opacity: 0.9;
 }
 
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button:disabled:hover {
+  opacity: 0.5;
+}
+
 .button-primary {
   background: #2563eb;
   color: #ffffff;
@@ -54,6 +63,11 @@ body {
   background: var(--button-secondary-bg);
   color: var(--button-secondary-fg);
   border: 1px solid var(--button-secondary-border);
+}
+
+.button-danger {
+  background: #dc2626;
+  color: #ffffff;
 }
 
 .input-field {

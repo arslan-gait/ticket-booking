@@ -6,6 +6,7 @@ import {
   getAdminEvents,
   getVenue,
   getVenues,
+  toErrorMessage,
   updateEvent,
   type EventItem,
   type VenueListItem,
@@ -190,7 +191,7 @@ export default function AdminEventsManager() {
   }
 
   useEffect(() => {
-    load().catch((e) => setError(String(e)));
+    load().catch((e) => setError(toErrorMessage(e)));
   }, []);
 
   async function submit() {
@@ -234,7 +235,7 @@ export default function AdminEventsManager() {
       setForm(emptyForm);
       await load();
     } catch (e) {
-      setError(String(e));
+      setError(toErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -245,7 +246,7 @@ export default function AdminEventsManager() {
       await updateEvent(event.id, { is_active: !event.is_active });
       await load();
     } catch (e) {
-      setError(String(e));
+      setError(toErrorMessage(e));
     }
   }
 
@@ -305,7 +306,7 @@ export default function AdminEventsManager() {
       setVenueTypeCounts({});
       setVenueTypeSections({});
       setForm((s) => ({ ...s, typePrices: [], rowPrices: [] }));
-      setError(String(e));
+      setError(toErrorMessage(e));
     }
   }
 

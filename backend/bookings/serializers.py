@@ -58,6 +58,7 @@ class CreateBookingSerializer(serializers.Serializer):
 
 class VerifyTicketSerializer(serializers.Serializer):
     qr_data = serializers.CharField()
+    consume = serializers.BooleanField(required=False, default=True)
 
 
 class UpdateBookingStatusSerializer(serializers.Serializer):

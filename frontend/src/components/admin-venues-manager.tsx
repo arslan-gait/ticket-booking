@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import VenueEditor from "@/components/venue-editor";
-import { createVenue, getVenue, getVenues, updateVenue, type VenueListItem } from "@/lib/api";
+import { createVenue, getVenue, getVenues, toErrorMessage, updateVenue, type VenueListItem } from "@/lib/api";
 import { useAppSettings } from "@/components/app-settings-provider";
 
 type SeatDraft = {
@@ -82,7 +82,7 @@ export default function AdminVenuesManager() {
   }
 
   useEffect(() => {
-    reloadVenues().catch((e) => setError(String(e)));
+    reloadVenues().catch((e) => setError(toErrorMessage(e)));
   }, []);
 
   async function loadVenue(id: string) {
@@ -148,7 +148,7 @@ export default function AdminVenuesManager() {
       }
       await reloadVenues();
     } catch (e) {
-      setError(String(e));
+      setError(toErrorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -172,7 +172,7 @@ export default function AdminVenuesManager() {
             value={selectedVenueId}
             onChange={(e) => {
               setSelectedVenueId(e.target.value);
-              loadVenue(e.target.value).catch((err) => setError(String(err)));
+              loadVenue(e.target.value).catch((err) => setError(toErrorMessage(err)));
             }}
           >
             <option value="">{tr("createNewVenue")}</option>

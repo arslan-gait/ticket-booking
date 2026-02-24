@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
 import { useAppSettings } from "@/components/app-settings-provider";
 
 export default function TopbarMenu() {
   const pathname = usePathname();
   const { tr } = useAppSettings();
-  const navItems = [
-    { href: "/", label: tr("navEvents") },
-    { href: "/admin", label: tr("navAdmin") },
-  ];
+
+  const navItems = useMemo(() => {
+    return [{ href: "/", label: tr("navEvents") }];
+  }, [tr]);
 
   function isActivePath(href: string): boolean {
     if (href === "/") return pathname === "/";

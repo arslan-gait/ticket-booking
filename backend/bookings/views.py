@@ -100,7 +100,7 @@ def create_booking(request):
         )
     except Event.DoesNotExist:
         return Response(
-            {'error': 'Event not found or not active.'},
+            {'error': 'Событие не найдено или не активно.'},
             status=status.HTTP_404_NOT_FOUND,
         )
 
@@ -110,7 +110,7 @@ def create_booking(request):
     )
     if len(seats) != len(seat_ids):
         return Response(
-            {'error': 'One or more seats are invalid for this venue.'},
+            {'error': 'Одно или несколько мест недоступны для этой площадки.'},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -118,7 +118,7 @@ def create_booking(request):
         seat_type_prices, row_prices = split_price_tiers(event.price_tiers)
     except Exception:
         return Response(
-            {'error': 'Event price tiers contain invalid values.'},
+            {'error': 'В тарифах события указаны некорректные значения.'},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -132,7 +132,7 @@ def create_booking(request):
     if missing_price_types:
         return Response(
             {
-                'error': 'Missing seat type prices for this event.',
+                'error': 'Для этого события не хватает цен по типам мест.',
                 'missing_seat_types': missing_price_types,
             },
             status=status.HTTP_400_BAD_REQUEST,
@@ -153,7 +153,7 @@ def create_booking(request):
         if taken_set:
             return Response(
                 {
-                    'error': 'Some seats are already booked.',
+                    'error': 'Некоторые места уже забронированы.',
                     'taken_seat_ids': list(taken_set),
                 },
                 status=status.HTTP_409_CONFLICT,
@@ -203,7 +203,7 @@ def event_seat_availability(request, event_id):
         event = Event.objects.select_related('venue').get(id=event_id)
     except Event.DoesNotExist:
         return Response(
-            {'error': 'Event not found.'},
+            {'error': 'Событие не найдено.'},
             status=status.HTTP_404_NOT_FOUND,
         )
 
@@ -249,11 +249,12 @@ def event_seat_availability(request, event_id):
 def verify_ticket(request):
     serializer = VerifyTicketSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
+    consume = serializer.validated_data['consume']
 
     payload = Ticket.verify_qr_data(serializer.validated_data['qr_data'])
     if payload is None:
         return Response(
-            {'valid': False, 'error': 'Invalid or tampered QR code.'},
+            {'valid': False, 'error': 'QR-код недействителен или поврежден.'},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -266,7 +267,7 @@ def verify_ticket(request):
         )
     except Ticket.DoesNotExist:
         return Response(
-            {'valid': False, 'error': 'Ticket not found.'},
+            {'valid': False, 'error': 'Билет не найден.'},
             status=status.HTTP_404_NOT_FOUND,
         )
 
@@ -275,34 +276,21 @@ def verify_ticket(request):
     if booking.status == 'cancelled':
         return Response({
             'valid': False,
-            'error': 'This booking has been cancelled.',
+            'error': 'Эта бронь отменена.',
         })
 
     if booking.status != 'paid':
         return Response({
             'valid': False,
-            'error': 'This booking has not been paid yet.',
+            'error': 'Эта бронь еще не оплачена.',
         })
 
     if ticket.is_scanned:
         return Response({
             'valid': False,
-            'error': f'Already scanned at {ticket.scanned_at.isoformat()}.',
+            'error': f'Билет уже погашен: {ticket.scanned_at.isoformat()}.',
         })
 
-    with transaction.atomic():
-        rows_updated = (
-            Ticket.objects
-            .filter(id=ticket.id, is_scanned=False)
-            .update(is_scanned=True, scanned_at=timezone.now())
-        )
-        if rows_updated == 0:
-            return Response({
-                'valid': False,
-                'error': 'Ticket was just scanned by another device.',
-            })
-
-    ticket.refresh_from_db()
     seats = [
         {
             'section': item.seat.section,
@@ -312,9 +300,23 @@ def verify_ticket(request):
         }
         for item in booking.items.all()
     ]
+    if consume:
+        with transaction.atomic():
+            rows_updated = (
+                Ticket.objects
+                .filter(id=ticket.id, is_scanned=False)
+                .update(is_scanned=True, scanned_at=timezone.now())
+            )
+            if rows_updated == 0:
+                return Response({
+                    'valid': False,
+                    'error': 'Билет только что был погашен на другом устройстве.',
+                })
+        ticket.refresh_from_db()
 
     return Response({
         'valid': True,
+        'consumed': consume,
         'booking': {
             'id': booking.id,
             'customer_name': booking.customer_name,
@@ -325,5 +327,5 @@ def verify_ticket(request):
             'seats': seats,
             'total_price': str(booking.total_price),
         },
-        'scanned_at': ticket.scanned_at.isoformat(),
+        'scanned_at': ticket.scanned_at.isoformat() if ticket.scanned_at else None,
     })

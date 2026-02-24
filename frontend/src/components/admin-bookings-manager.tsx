@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   getAdminEvents,
   getBookings,
   getEventSeats,
+  toErrorMessage,
   updateBookingStatus,
   type BookingListItem,
   type EventItem,
@@ -16,6 +18,7 @@ import { useAppSettings } from "@/components/app-settings-provider";
 
 export default function AdminBookingsManager() {
   const { tr } = useAppSettings();
+  const router = useRouter();
   const [bookings, setBookings] = useState<BookingListItem[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [eventFilter, setEventFilter] = useState("");
@@ -48,15 +51,15 @@ export default function AdminBookingsManager() {
   }
 
   useEffect(() => {
-    loadEvents().catch((e) => setError(String(e)));
+    loadEvents().catch((e) => setError(toErrorMessage(e)));
   }, []);
 
   useEffect(() => {
-    loadBookings().catch((e) => setError(String(e)));
+    loadBookings().catch((e) => setError(toErrorMessage(e)));
   }, [statusFilter, eventFilter]);
 
   useEffect(() => {
-    loadEventSeats().catch((e) => setError(String(e)));
+    loadEventSeats().catch((e) => setError(toErrorMessage(e)));
   }, [eventFilter]);
 
   async function markStatus(id: number, status: "paid" | "cancelled") {
@@ -65,17 +68,18 @@ export default function AdminBookingsManager() {
       await loadBookings();
       await loadEventSeats();
     } catch (e) {
-      setError(String(e));
+      setError(toErrorMessage(e));
     }
   }
 
   function confirmCancelBooking(id: number) {
     const confirmed = window.confirm("Are you sure you want to cancel this booking?");
     if (!confirmed) return;
-    markStatus(id, "cancelled").catch((e) => setError(String(e)));
+    markStatus(id, "cancelled").catch((e) => setError(toErrorMessage(e)));
   }
 
   const normalizedWhatsappFilter = whatsappFilter.replace(/\D/g, "");
+  const normalizeStatus = (status: string) => status.trim().toLowerCase();
   const filteredBookings = bookings.filter((booking) => {
     const matchesName = booking.customer_name.toLowerCase().includes(nameFilter.toLowerCase().trim());
     const bookingPhone = booking.phone_number.replace(/\D/g, "");
@@ -152,8 +156,24 @@ export default function AdminBookingsManager() {
         </div>
       ) : null}
       <div className="space-y-2">
-        {filteredBookings.map((booking) => (
-          <div key={booking.id} className="card p-4">
+        {filteredBookings.map((booking) => {
+          const isPaid = normalizeStatus(booking.status) === "paid";
+          const isPending = normalizeStatus(booking.status) === "pending";
+          const isCancelled = normalizeStatus(booking.status) === "cancelled";
+          return (
+          <div
+            key={booking.id}
+            className="card cursor-pointer p-4 transition-colors hover:bg-[var(--background)]/40"
+            role="button"
+            tabIndex={0}
+            onClick={() => router.push(`/booking/${booking.id}`)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                router.push(`/booking/${booking.id}`);
+              }
+            }}
+          >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="font-semibold">
@@ -172,23 +192,36 @@ export default function AdminBookingsManager() {
               </div>
               <div className="flex gap-2">
                 <button
-                  className="button button-primary"
-                  disabled={booking.status === "paid"}
-                  onClick={() => markStatus(booking.id, "paid")}
+                  className={`button ${isPending ? "button-primary" : "button-secondary"}`}
+                  disabled={!isPending}
+                  aria-disabled={!isPending}
+                  style={{ pointerEvents: isPending ? "auto" : "none" }}
+                  onClick={
+                    isPending
+                      ? (event) => {
+                          event.stopPropagation();
+                          markStatus(booking.id, "paid");
+                        }
+                      : undefined
+                  }
                 >
                   {tr("markPaid")}
                 </button>
                 <button
-                  className="button button-secondary"
-                  disabled={booking.status === "cancelled"}
-                  onClick={() => confirmCancelBooking(booking.id)}
+                  className="button button-danger"
+                  disabled={isCancelled}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    confirmCancelBooking(booking.id);
+                  }}
                 >
                   {tr("cancel")}
                 </button>
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
     </div>

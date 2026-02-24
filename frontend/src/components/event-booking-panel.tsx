@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBooking, type SeatItem } from "@/lib/api";
+import { createBooking, toErrorMessage, type SeatItem } from "@/lib/api";
 import SeatPicker from "@/components/seat-picker";
 import { useAppSettings } from "@/components/app-settings-provider";
 
@@ -65,7 +65,7 @@ export default function EventBookingPanel({ eventId, seats, priceTiers, layoutMe
       });
       router.push(`/booking/${booking.id}`);
     } catch (err) {
-      setError(String(err));
+      setError(toErrorMessage(err));
     } finally {
       setLoading(false);
     }
