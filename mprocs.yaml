@@ -1,0 +1,10 @@
+procs:
+  backend:
+    cwd: backend
+    shell: zsh
+    cmd: source .venv/bin/activate && python manage.py runserver
+
+  frontend:
+    cwd: frontend
+    shell: zsh
+    cmd: npm run dev

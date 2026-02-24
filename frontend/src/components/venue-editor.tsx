@@ -5,8 +5,8 @@ import { useMemo } from "react";
 
 type SeatDraft = {
   id: number;
-  x: number;
-  y: number;
+  cx: number;
+  cy: number;
   label: string;
 };
 
@@ -21,8 +21,8 @@ export default function VenueEditor({ seats }: Props) {
     () =>
       seats.map((seat) => (
         <Group key={seat.id}>
-          <Circle x={seat.x} y={seat.y} radius={12} fill="#2563eb" />
-          <Text x={seat.x - 14} y={seat.y + 16} text={seat.label} fontSize={12} />
+          <Circle x={seat.cx} y={seat.cy} radius={12} fill="#2563eb" />
+          <Text x={seat.cx - 14} y={seat.cy + 16} text={seat.label} fontSize={12} />
         </Group>
       )),
     [seats],

@@ -11,6 +11,45 @@ export type EventItem = {
   is_active: boolean;
 };
 
+type Paginated<T> = { results: T[] };
+
+export type VenueListItem = {
+  id: number;
+  name: string;
+  description: string;
+  seat_count: number;
+};
+
+export type VenueDetail = {
+  id: number;
+  name: string;
+  description: string;
+  layout_meta: Record<string, unknown>;
+  seats: Array<{
+    id: number;
+    label: string;
+    cx: number;
+    cy: number;
+    section: string;
+    row_label: string;
+    seat_number: number;
+    seat_type: string;
+  }>;
+};
+
+export type BookingListItem = {
+  id: number;
+  event: number;
+  event_name: string;
+  event_date: string;
+  customer_name: string;
+  phone_number: string;
+  status: string;
+  total_price: string;
+  seat_count: number;
+  created_at: string;
+};
+
 export type SeatItem = {
   id: number;
   label: string;
@@ -58,7 +97,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 }
 
 export async function getEvents(): Promise<EventItem[]> {
-  const res = await apiFetch<{ results: EventItem[] }>("/events/");
+  const res = await apiFetch<Paginated<EventItem>>("/events/");
   return res.results ?? [];
 }
 
@@ -74,6 +113,110 @@ export async function createBooking(input: BookingCreateInput) {
   return apiFetch<{ id: number }>(`/bookings/create/`, {
     method: "POST",
     body: JSON.stringify(input),
+  });
+}
+
+export async function getAdminEvents(): Promise<EventItem[]> {
+  const res = await apiFetch<Paginated<EventItem>>("/events/?include_inactive=1");
+  return res.results ?? [];
+}
+
+export async function createEvent(input: {
+  name: string;
+  description: string;
+  date: string;
+  venue: number;
+  price_tiers: Record<string, number>;
+  is_active: boolean;
+}) {
+  return apiFetch<EventItem>("/events/", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateEvent(
+  id: number,
+  input: Partial<{
+    name: string;
+    description: string;
+    date: string;
+    venue: number;
+    price_tiers: Record<string, number>;
+    is_active: boolean;
+  }>,
+) {
+  return apiFetch<EventItem>(`/events/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getVenues(): Promise<VenueListItem[]> {
+  const res = await apiFetch<Paginated<VenueListItem>>("/venues/");
+  return res.results ?? [];
+}
+
+export async function getVenue(id: number): Promise<VenueDetail> {
+  return apiFetch<VenueDetail>(`/venues/${id}/`);
+}
+
+export async function createVenue(input: {
+  name: string;
+  description: string;
+  layout_meta: Record<string, unknown>;
+  seats: Array<{
+    label: string;
+    cx: number;
+    cy: number;
+    section: string;
+    row_label: string;
+    seat_number: number;
+    seat_type: string;
+  }>;
+}) {
+  return apiFetch<VenueDetail>("/venues/", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateVenue(
+  id: number,
+  input: Partial<{
+    name: string;
+    description: string;
+    layout_meta: Record<string, unknown>;
+    seats: Array<{
+      label: string;
+      cx: number;
+      cy: number;
+      section: string;
+      row_label: string;
+      seat_number: number;
+      seat_type: string;
+    }>;
+  }>,
+) {
+  return apiFetch<VenueDetail>(`/venues/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getBookings(params?: { event?: number; status?: string }) {
+  const search = new URLSearchParams();
+  if (params?.event) search.set("event", String(params.event));
+  if (params?.status) search.set("status", params.status);
+  const query = search.toString();
+  const res = await apiFetch<Paginated<BookingListItem>>(`/bookings/${query ? `?${query}` : ""}`);
+  return res.results ?? [];
+}
+
+export async function updateBookingStatus(id: number, status: "paid" | "cancelled") {
+  return apiFetch(`/bookings/${id}/update-status/`, {
+    method: "POST",
+    body: JSON.stringify({ status }),
   });
 }
 

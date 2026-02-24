@@ -34,6 +34,7 @@ class EventViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        if self.action == 'list':
+        include_inactive = self.request.query_params.get('include_inactive') == '1'
+        if self.action == 'list' and not include_inactive:
             qs = qs.filter(is_active=True)
         return qs
