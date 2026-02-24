@@ -6,8 +6,8 @@
       "regular": "#14b8a6",
       "vip": "#f59e0b",
       "balcony": "#facc15",
-      "box": "#ec4899",
-      "box_upper": "#2563eb" 
+      "tier_3": "#ec4899",
+      "tier_2": "#2563eb"
     },
     "stage": {
         "x": 290,

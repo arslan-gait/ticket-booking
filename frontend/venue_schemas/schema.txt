@@ -2997,201 +2997,201 @@
     "seat_type": "balcony"
   },
   {
-    "label": "box-1",
+    "label": "tier_3-1",
     "cx": 0,
     "cy": 441,
     "section": "Левая ложа 3-го яруса",
     "row_label": "",
     "seat_number": 1,
-    "seat_type": "box_upper"
+    "seat_type": "tier_3"
   },
   {
-    "label": "box-2",
+    "label": "tier_3-2",
     "cx": 0,
     "cy": 479,
     "section": "Левая ложа 3-го яруса",
     "row_label": "",
     "seat_number": 2,
-    "seat_type": "box_upper"
+    "seat_type": "tier_3"
   },
   {
-    "label": "box-3",
+    "label": "tier_3-3",
     "cx": 0,
     "cy": 517,
     "section": "Левая ложа 3-го яруса",
     "row_label": "",
     "seat_number": 3,
-    "seat_type": "box_upper"
+    "seat_type": "tier_3"
   },
   {
-    "label": "box-4",
+    "label": "tier_3-4",
     "cx": 0,
     "cy": 555,
     "section": "Левая ложа 3-го яруса",
     "row_label": "",
     "seat_number": 4,
-    "seat_type": "box_upper"
+    "seat_type": "tier_3"
   },
   {
-    "label": "box-5",
+    "label": "tier_3-5",
     "cx": 0,
     "cy": 593,
     "section": "Левая ложа 3-го яруса",
     "row_label": "",
     "seat_number": 5,
-    "seat_type": "box_upper"
+    "seat_type": "tier_3"
   },
   {
-    "label": "box-5",
+    "label": "tier_3-5",
     "cx": 1080,
     "cy": 441,
     "section": "Правая ложа 3-го яруса",
     "row_label": "",
     "seat_number": 5,
-    "seat_type": "box_upper"
+    "seat_type": "tier_3"
   },
   {
-    "label": "box-4",
+    "label": "tier_3-4",
     "cx": 1080,
     "cy": 479,
     "section": "Правая ложа 3-го яруса",
     "row_label": "",
     "seat_number": 4,
-    "seat_type": "box_upper"
+    "seat_type": "tier_3"
   },
   {
-    "label": "box-3",
+    "label": "tier_3-3",
     "cx": 1080,
     "cy": 517,
     "section": "Правая ложа 3-го яруса",
     "row_label": "",
     "seat_number": 3,
-    "seat_type": "box_upper"
+    "seat_type": "tier_3"
   },
   {
-    "label": "box-2",
+    "label": "tier_3-2",
     "cx": 1080,
     "cy": 555,
     "section": "Правая ложа 3-го яруса",
     "row_label": "",
     "seat_number": 2,
-    "seat_type": "box_upper"
+    "seat_type": "tier_3"
   },
   {
-    "label": "box-1",
+    "label": "tier_3-1",
     "cx": 1080,
     "cy": 593,
     "section": "Правая ложа 3-го яруса",
     "row_label": "",
     "seat_number": 1,
-    "seat_type": "box_upper"
+    "seat_type": "tier_3"
   },
   {
-    "label": "box-1",
+    "label": "tier_2-1",
     "cx": 0,
     "cy": 671,
     "section": "Левая ложа 2-го яруса",
     "row_label": "",
     "seat_number": 1,
-    "seat_type": "box"
+    "seat_type": "tier_2"
   },
   {
-    "label": "box-2",
+    "label": "tier_2-2",
     "cx": 0,
     "cy": 709,
     "section": "Левая ложа 2-го яруса",
     "row_label": "",
     "seat_number": 2,
-    "seat_type": "box"
+    "seat_type": "tier_2"
   },
   {
-    "label": "box-3",
+    "label": "tier_2-3",
     "cx": 0,
     "cy": 747,
     "section": "Левая ложа 2-го яруса",
     "row_label": "",
     "seat_number": 3,
-    "seat_type": "box"
+    "seat_type": "tier_2"
   },
   {
-    "label": "box-4",
+    "label": "tier_2-4",
     "cx": 0,
     "cy": 785,
     "section": "Левая ложа 2-го яруса",
     "row_label": "",
     "seat_number": 4,
-    "seat_type": "box"
+    "seat_type": "tier_2"
   },
   {
-    "label": "box-5",
+    "label": "tier_2-5",
     "cx": 0,
     "cy": 823,
     "section": "Левая ложа 2-го яруса",
     "row_label": "",
     "seat_number": 5,
-    "seat_type": "box"
+    "seat_type": "tier_2"
   },
   {
-    "label": "box-6",
+    "label": "tier_2-6",
     "cx": 0,
     "cy": 861,
     "section": "Левая ложа 2-го яруса",
     "row_label": "",
     "seat_number": 6,
-    "seat_type": "box"
+    "seat_type": "tier_2"
   },
   {
-    "label": "box-6",
+    "label": "tier_2-6",
     "cx": 1080,
     "cy": 671,
     "section": "Правая ложа 2-го яруса",
     "row_label": "",
     "seat_number": 6,
-    "seat_type": "box"
+    "seat_type": "tier_2"
   },
   {
-    "label": "box-5",
+    "label": "tier_2-5",
     "cx": 1080,
     "cy": 709,
     "section": "Правая ложа 2-го яруса",
     "row_label": "",
     "seat_number": 5,
-    "seat_type": "box"
+    "seat_type": "tier_2"
   },
   {
-    "label": "box-4",
+    "label": "tier_2-4",
     "cx": 1080,
     "cy": 747,
     "section": "Правая ложа 2-го яруса",
     "row_label": "",
     "seat_number": 4,
-    "seat_type": "box"
+    "seat_type": "tier_2"
   },
   {
-    "label": "box-3",
+    "label": "tier_2-3",
     "cx": 1080,
     "cy": 785,
     "section": "Правая ложа 2-го яруса",
     "row_label": "",
     "seat_number": 3,
-    "seat_type": "box"
+    "seat_type": "tier_2"
   },
   {
-    "label": "box-2",
+    "label": "tier_2-2",
     "cx": 1080,
     "cy": 823,
     "section": "Правая ложа 2-го яруса",
     "row_label": "",
     "seat_number": 2,
-    "seat_type": "box"
+    "seat_type": "tier_2"
   },
   {
-    "label": "box-1",
+    "label": "tier_2-1",
     "cx": 1080,
     "cy": 861,
     "section": "Правая ложа 2-го яруса",
     "row_label": "",
     "seat_number": 1,
-    "seat_type": "box"
+    "seat_type": "tier_2"
   }
 ]
