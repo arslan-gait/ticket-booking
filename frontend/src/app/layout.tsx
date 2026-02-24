@@ -7,6 +7,12 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Ticket Booking",
   description: "Event ticket booking app",
+  formatDetection: {
+    telephone: false,
+    date: false,
+    email: false,
+    address: false,
+  },
 };
 
 export default async function RootLayout({

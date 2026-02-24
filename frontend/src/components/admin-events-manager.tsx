@@ -10,6 +10,7 @@ import {
   type EventItem,
   type VenueListItem,
 } from "@/lib/api";
+import { formatDateTime } from "@/lib/datetime";
 import { useAppSettings } from "@/components/app-settings-provider";
 
 type TypePriceRow = {
@@ -17,23 +18,46 @@ type TypePriceRow = {
   price: string;
 };
 
+type RowPriceRow = {
+  section: string;
+  rowLabel: string;
+  seatType: string;
+  seatsCount: number;
+  price: string;
+};
+
+type VenueSeatPricingSource = {
+  seat_type: string;
+  section: string;
+  row_label: string;
+};
+
+const ROW_PRICE_PREFIX = "row:";
+
+function buildRowPriceKey(section: string, rowLabel: string): string {
+  return `${ROW_PRICE_PREFIX}${section.trim()}::${rowLabel.trim()}`;
+}
+
 const emptyForm = {
   name: "",
   description: "",
   date: "",
   venue: "",
   typePrices: [] as TypePriceRow[],
+  rowPrices: [] as RowPriceRow[],
   isActive: true,
 };
 
-function buildSeatTypeCounts(
-  seats: Array<{ seat_type: string; section: string }>,
+function buildVenuePricingData(
+  seats: Array<VenueSeatPricingSource>,
 ): {
   counts: Record<string, number>;
   sectionsByType: Record<string, string[]>;
+  rows: Array<Pick<RowPriceRow, "section" | "rowLabel" | "seatType" | "seatsCount">>;
 } {
   const counts: Record<string, number> = {};
   const sectionsByTypeSets: Record<string, Set<string>> = {};
+  const rowMap = new Map<string, { section: string; rowLabel: string; seatType: string; seatsCount: number }>();
   for (const seat of seats) {
     const seatType = seat.seat_type?.trim();
     if (!seatType) continue;
@@ -46,12 +70,33 @@ function buildSeatTypeCounts(
     if (section) {
       sectionsByTypeSets[seatType].add(section);
     }
+
+    const rowLabel = seat.row_label?.trim();
+    if (rowLabel) {
+      const rowKey = `${section || "_"}::${rowLabel}`;
+      const existing = rowMap.get(rowKey);
+      if (existing) {
+        existing.seatsCount += 1;
+      } else {
+        rowMap.set(rowKey, {
+          section: section || "",
+          rowLabel,
+          seatType,
+          seatsCount: 1,
+        });
+      }
+    }
   }
   const sectionsByType: Record<string, string[]> = {};
   for (const [seatType, sections] of Object.entries(sectionsByTypeSets)) {
     sectionsByType[seatType] = Array.from(sections).sort((a, b) => a.localeCompare(b));
   }
-  return { counts, sectionsByType };
+  const rows = Array.from(rowMap.values()).sort((a, b) => {
+    const sectionCompare = a.section.localeCompare(b.section, undefined, { numeric: true });
+    if (sectionCompare !== 0) return sectionCompare;
+    return a.rowLabel.localeCompare(b.rowLabel, undefined, { numeric: true });
+  });
+  return { counts, sectionsByType, rows };
 }
 
 export default function AdminEventsManager() {
@@ -59,6 +104,7 @@ export default function AdminEventsManager() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [venues, setVenues] = useState<VenueListItem[]>([]);
   const [form, setForm] = useState(emptyForm);
+  const [venueSeats, setVenueSeats] = useState<VenueSeatPricingSource[]>([]);
   const [venueTypeCounts, setVenueTypeCounts] = useState<Record<string, number>>({});
   const [venueTypeSections, setVenueTypeSections] = useState<Record<string, string[]>>({});
   const [error, setError] = useState("");
@@ -89,9 +135,52 @@ export default function AdminEventsManager() {
     [form.typePrices, venueTypeCounts, venueTypeSections],
   );
 
+  const rowPriceSummaries = useMemo(
+    () =>
+      form.rowPrices.map((row) => {
+        const rawPrice = row.price.trim();
+        const parsedPrice = rawPrice ? Number(rawPrice) : NaN;
+        const unitPrice = Number.isFinite(parsedPrice) ? parsedPrice : 0;
+        return {
+          sectionLabel: row.section ? `${row.section} · ${tr("row")} ${row.rowLabel}` : `${tr("row")} ${row.rowLabel}`,
+          places: row.seatsCount,
+          unitPrice,
+          subtotal: unitPrice * row.seatsCount,
+        };
+      }),
+    [form.rowPrices, tr],
+  );
+
+  const seatTypePriceMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const row of form.typePrices) {
+      const seatType = row.seatType.trim();
+      if (!seatType || !row.price.trim()) continue;
+      const parsed = Number(row.price);
+      if (!Number.isNaN(parsed)) map[seatType] = parsed;
+    }
+    return map;
+  }, [form.typePrices]);
+
+  const rowPriceMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const row of form.rowPrices) {
+      if (!row.price.trim()) continue;
+      const parsed = Number(row.price);
+      if (Number.isNaN(parsed)) continue;
+      map[buildRowPriceKey(row.section, row.rowLabel)] = parsed;
+    }
+    return map;
+  }, [form.rowPrices]);
+
   const totalSum = useMemo(
-    () => rowSummaries.reduce((sum, row) => sum + row.subtotal, 0),
-    [rowSummaries],
+    () =>
+      venueSeats.reduce((sum, seat) => {
+        const rowPrice = rowPriceMap[buildRowPriceKey(seat.section || "", seat.row_label || "")];
+        if (typeof rowPrice === "number") return sum + rowPrice;
+        return sum + (seatTypePriceMap[seat.seat_type?.trim() || ""] ?? 0);
+      }, 0),
+    [rowPriceMap, seatTypePriceMap, venueSeats],
   );
 
   async function load() {
@@ -106,20 +195,29 @@ export default function AdminEventsManager() {
 
   async function submit() {
     if (!form.name || !form.date || !form.venue) return;
-    const validRows = form.typePrices.filter((row) => row.seatType.trim() && row.price.trim());
-    if (validRows.length === 0) {
+    const validTypeRows = form.typePrices.filter((row) => row.seatType.trim() && row.price.trim());
+    const validRowRows = form.rowPrices.filter((row) => row.rowLabel.trim() && row.price.trim());
+    if (validTypeRows.length === 0 && validRowRows.length === 0) {
       setError(tr("typePriceRequired"));
       return;
     }
 
     const priceTiers: Record<string, number> = {};
-    for (const row of validRows) {
+    for (const row of validTypeRows) {
       const parsed = Number(row.price);
       if (Number.isNaN(parsed)) {
         setError(`${tr("price")} "${row.price}" is invalid.`);
         return;
       }
       priceTiers[row.seatType.trim()] = parsed;
+    }
+    for (const row of validRowRows) {
+      const parsed = Number(row.price);
+      if (Number.isNaN(parsed)) {
+        setError(`${tr("price")} "${row.price}" is invalid.`);
+        return;
+      }
+      priceTiers[buildRowPriceKey(row.section, row.rowLabel)] = parsed;
     }
 
     setLoading(true);
@@ -180,9 +278,10 @@ export default function AdminEventsManager() {
     setError("");
 
     if (!venueId) {
+      setVenueSeats([]);
       setVenueTypeCounts({});
       setVenueTypeSections({});
-      setForm((s) => ({ ...s, typePrices: [] }));
+      setForm((s) => ({ ...s, typePrices: [], rowPrices: [] }));
       return;
     }
 
@@ -190,19 +289,22 @@ export default function AdminEventsManager() {
       const venue = await getVenue(Number(venueId));
       if (requestId !== venueSelectionRequestId.current) return;
 
-      const { counts, sectionsByType } = buildSeatTypeCounts(venue.seats);
+      const { counts, sectionsByType, rows } = buildVenuePricingData(venue.seats);
       const orderedTypes = Object.keys(counts).sort((a, b) => a.localeCompare(b));
+      setVenueSeats(venue.seats);
       setVenueTypeCounts(counts);
       setVenueTypeSections(sectionsByType);
       setForm((s) => ({
         ...s,
         typePrices: orderedTypes.map((seatType) => ({ seatType, price: "" })),
+        rowPrices: rows.map((row) => ({ ...row, price: "" })),
       }));
     } catch (e) {
       if (requestId !== venueSelectionRequestId.current) return;
+      setVenueSeats([]);
       setVenueTypeCounts({});
       setVenueTypeSections({});
-      setForm((s) => ({ ...s, typePrices: [] }));
+      setForm((s) => ({ ...s, typePrices: [], rowPrices: [] }));
       setError(String(e));
     }
   }
@@ -242,6 +344,7 @@ export default function AdminEventsManager() {
           ))}
         </select>
         <div className="space-y-2">
+          <p className="text-sm font-semibold">{tr("seatType")}</p>
           {form.typePrices.map((row, index) => (
             <div key={`${index}-${row.seatType}`} className="grid grid-cols-[1fr_180px_120px_120px] gap-2">
               <div className="flex items-center rounded border border-[var(--border)] px-3 text-sm">
@@ -264,7 +367,40 @@ export default function AdminEventsManager() {
           <button className="button button-secondary" type="button" onClick={addTypePriceRow}>
             {tr("addTypePrice")}
           </button>
-          {form.typePrices.length > 0 ? (
+          {form.rowPrices.length > 0 ? (
+            <div className="space-y-2 pt-2">
+              <p className="text-sm font-semibold">{tr("rowPrices")}</p>
+              {form.rowPrices.map((row) => (
+                <div
+                  key={`${row.section}-${row.rowLabel}`}
+                  className="grid grid-cols-[1fr_180px_120px] gap-2"
+                >
+                  <div className="flex items-center rounded border border-[var(--border)] px-3 text-sm">
+                    {row.section ? `${row.section} · ${tr("row")} ${row.rowLabel}` : `${tr("row")} ${row.rowLabel}`}
+                  </div>
+                  <input
+                    className="input-field"
+                    placeholder={tr("price")}
+                    value={row.price}
+                    onChange={(e) =>
+                      setForm((s) => ({
+                        ...s,
+                        rowPrices: s.rowPrices.map((item) =>
+                          item.section === row.section && item.rowLabel === row.rowLabel
+                            ? { ...item, price: e.target.value }
+                            : item,
+                        ),
+                      }))
+                    }
+                  />
+                  <div className="flex items-center rounded border border-[var(--border)] px-3 text-sm text-[var(--muted)]">
+                    {row.seatsCount} {tr("seatsCount")}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {form.typePrices.length > 0 || form.rowPrices.length > 0 ? (
             <div className="mt-2 rounded border border-[var(--border)] p-3 text-sm">
               <p className="mb-2 font-medium">
                 Total places: {totalPlaces} {tr("seatsCount")}
@@ -276,6 +412,14 @@ export default function AdminEventsManager() {
                     {row.unitPrice} ₸ × {row.places} = {row.subtotal} ₸
                   </p>
                 ))}
+                {rowPriceSummaries
+                  .filter((row) => row.unitPrice > 0)
+                  .map((row, index) => (
+                    <p key={`${row.sectionLabel}-${index}`} className="muted">
+                      {row.sectionLabel + ": "}
+                      {row.unitPrice} ₸ × {row.places} = {row.subtotal} ₸
+                    </p>
+                  ))}
               </div>
               <p className="mt-2 font-semibold">
                 {tr("total")}: {totalSum} ₸
@@ -297,25 +441,53 @@ export default function AdminEventsManager() {
       </div>
 
       <div className="card p-4">
-        <h2 className="mb-3 text-lg font-semibold">{tr("existingEvents")}</h2>
-        <div className="space-y-2">
-          {events.map((event) => (
-            <div key={event.id} className="flex items-center justify-between rounded border border-[var(--border)] p-3">
-              <div>
-                <p className="font-medium">{event.name}</p>
-                <p className="muted text-sm">
-                  {event.venue_name} · {new Date(event.date).toLocaleString()}
-                </p>
-                <p className="muted text-xs">
-                  {tr("status")}: {event.is_active ? tr("active") : tr("inactive")}
-                </p>
-              </div>
-              <button className="button button-secondary" onClick={() => toggleActive(event)}>
-                {event.is_active ? tr("markInactive") : tr("markActive")}
-              </button>
-            </div>
-          ))}
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">{tr("existingEvents")}</h2>
+          <span className="rounded-full border border-[var(--border)] bg-[var(--bg-elev)] px-3 py-1 text-xs font-medium text-[var(--muted)]">
+            {events.length}
+          </span>
         </div>
+        {events.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg-elev)]/40 p-6 text-center">
+            <p className="text-sm font-medium text-[var(--muted)]">{tr("existingEvents")}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]/80">{tr("createEvent")}</p>
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {events.map((event) => (
+              <div
+                key={event.id}
+                className="group rounded-xl border border-[var(--border)] bg-[var(--bg-elev)]/50 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--accent)]/40 hover:shadow-md"
+              >
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <p className="line-clamp-2 text-base font-semibold leading-tight">{event.name}</p>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      event.is_active
+                        ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/40"
+                        : "bg-zinc-500/15 text-zinc-300 ring-1 ring-zinc-500/40"
+                    }`}
+                  >
+                    {event.is_active ? tr("active") : tr("inactive")}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 text-sm text-[var(--muted)]">
+                  <p className="rounded-md bg-[var(--bg)]/60 px-2.5 py-1.5">{event.venue_name}</p>
+                  <p className="rounded-md bg-[var(--bg)]/60 px-2.5 py-1.5">
+                    {formatDateTime(event.date)}
+                  </p>
+                </div>
+
+                <div className="mt-4 flex justify-end">
+                  <button className="button button-secondary" onClick={() => toggleActive(event)}>
+                    {event.is_active ? tr("markInactive") : tr("markActive")}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
     </div>

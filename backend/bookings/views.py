@@ -17,6 +17,35 @@ from .serializers import (
     VerifyTicketSerializer,
 )
 
+ROW_PRICE_PREFIX = 'row:'
+
+
+def build_row_price_key(section: str, row_label: str) -> str:
+    return f'{section.strip()}::{row_label.strip()}'
+
+
+def split_price_tiers(price_tiers):
+    seat_type_prices = {}
+    row_prices = {}
+    for raw_key, raw_price in price_tiers.items():
+        key = str(raw_key).strip()
+        price = Decimal(str(raw_price))
+        if key.startswith(ROW_PRICE_PREFIX):
+            row_key = key[len(ROW_PRICE_PREFIX):].strip()
+            if row_key:
+                row_prices[row_key] = price
+            continue
+        if key:
+            seat_type_prices[key] = price
+    return seat_type_prices, row_prices
+
+
+def resolve_seat_price(seat, seat_type_prices, row_prices):
+    row_key = build_row_price_key(seat.section or '', seat.row_label or '')
+    if row_key in row_prices:
+        return row_prices[row_key]
+    return seat_type_prices.get((seat.seat_type or '').strip())
+
 
 class BookingViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = (
@@ -85,23 +114,27 @@ def create_booking(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    missing_price_types = sorted({seat.seat_type for seat in seats if seat.seat_type not in event.price_tiers})
+    try:
+        seat_type_prices, row_prices = split_price_tiers(event.price_tiers)
+    except Exception:
+        return Response(
+            {'error': 'Event price tiers contain invalid values.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    missing_price_types = sorted(
+        {
+            (seat.seat_type or '').strip()
+            for seat in seats
+            if resolve_seat_price(seat, seat_type_prices, row_prices) is None
+        }
+    )
     if missing_price_types:
         return Response(
             {
                 'error': 'Missing seat type prices for this event.',
                 'missing_seat_types': missing_price_types,
             },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    seat_price_map = {}
-    try:
-        for seat_type, raw_price in event.price_tiers.items():
-            seat_price_map[seat_type] = Decimal(str(raw_price))
-    except Exception:
-        return Response(
-            {'error': 'Event price tiers contain invalid values.'},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -128,7 +161,7 @@ def create_booking(request):
 
         total = Decimal('0')
         for seat in seats:
-            price = seat_price_map[seat.seat_type]
+            price = resolve_seat_price(seat, seat_type_prices, row_prices)
             total += price
 
         booking = Booking.objects.create(
@@ -141,7 +174,7 @@ def create_booking(request):
 
         items = []
         for seat in seats:
-            price = seat_price_map[seat.seat_type]
+            price = resolve_seat_price(seat, seat_type_prices, row_prices)
             items.append(
                 BookingItem(
                     booking=booking,

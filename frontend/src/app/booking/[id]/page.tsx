@@ -32,7 +32,7 @@ export default async function BookingPage({ params }: { params: Promise<Params> 
           {t(lang, "status")}: <b>{booking.status}</b>
         </p>
         <p>
-          {t(lang, "total")}: <b>${booking.total_price}</b>
+          {t(lang, "total")}: <b>{booking.total_price} ₸</b>
         </p>
       </div>
       <div className="card p-4">

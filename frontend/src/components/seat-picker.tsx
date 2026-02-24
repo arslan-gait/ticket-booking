@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SeatItem } from "@/lib/api";
 import { useAppSettings } from "@/components/app-settings-provider";
 
@@ -8,28 +8,14 @@ type Props = {
   seats: SeatItem[];
   selectedSeatIds: number[];
   onToggleSeat: (seatId: number) => void;
+  onClearSelection?: () => void;
   priceTiers: Record<string, number>;
   layoutMeta: Record<string, unknown>;
+  adminView?: boolean;
 };
 
-const TYPE_COLORS = [
-  "#fb7185",
-  "#f59e0b",
-  "#34d399",
-  "#22d3ee",
-  "#38bdf8",
-  "#6366f1",
-  "#a78bfa",
-  "#e879f9",
-];
-
-function hashString(value: string): number {
-  let hash = 0;
-  for (let i = 0; i < value.length; i += 1) {
-    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
-  }
-  return hash;
-}
+const ROW_PRICE_PREFIX = "row:";
+const PRICE_COLORS = ["#3b82f6", "#8b5cf6", "#f59e0b", "#06b6d4", "#ec4899", "#22c55e", "#a16207", "#0f766e"];
 
 type LayoutMeta = {
   width?: number;
@@ -51,27 +37,62 @@ function toFiniteNumber(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function getSeatColor(key: string, customColors: Record<string, string>): string {
-  const normalized = key.toLowerCase();
-  const custom = customColors[normalized] || customColors[key];
-  if (custom) return custom;
-  return TYPE_COLORS[hashString(normalized) % TYPE_COLORS.length];
+function getPriceColor(price: number, priceColorMap: Map<number, string>): string {
+  if (!Number.isFinite(price) || price <= 0) return "#000000";
+  return priceColorMap.get(price) || "#000000";
 }
 
-export default function SeatPicker({ seats, selectedSeatIds, onToggleSeat, priceTiers, layoutMeta }: Props) {
+function buildRowPriceKey(section: string, rowLabel: string): string {
+  return `${ROW_PRICE_PREFIX}${section.trim()}::${rowLabel.trim()}`;
+}
+
+function getSeatPrice(
+  seat: Pick<SeatItem, "section" | "row_label" | "seat_type">,
+  priceTiers: Record<string, number>,
+): number {
+  const rowPrice = priceTiers[buildRowPriceKey(seat.section || "", seat.row_label || "")];
+  if (typeof rowPrice === "number") return rowPrice;
+  return priceTiers[seat.seat_type] ?? 0;
+}
+
+export default function SeatPicker({
+  seats,
+  selectedSeatIds,
+  onToggleSeat,
+  onClearSelection,
+  priceTiers,
+  layoutMeta,
+  adminView = false,
+}: Props) {
   const { tr } = useAppSettings();
-  const sectionLegend = useMemo(() => {
-    const uniqueSections = new Set(
-      seats
-        .map((seat) => seat.section?.trim())
-        .filter((section): section is string => Boolean(section)),
-    );
-    return Array.from(uniqueSections).sort((a, b) => a.localeCompare(b));
-  }, [seats]);
+  const bookedSeatColor = adminView ? "#ef4444" : "#94a3b8";
+  const paidSeatColor = "#6b7280";
+  const formatSeatLabel = (seat: Pick<SeatItem, "section" | "row_label" | "seat_number">): string => {
+    const section = seat.section?.trim() || "General";
+    const rowLabel = seat.row_label?.trim() || "-";
+    return `${section} ${rowLabel} ${tr("row").toLowerCase()}, ${seat.seat_number} ${tr("seatPlace")}`;
+  };
+  const mapViewportRef = useRef<HTMLDivElement | null>(null);
+  const [availableMapWidth, setAvailableMapWidth] = useState(0);
+  const uniquePrices = useMemo(() => {
+    const values = new Set<number>();
+    for (const seat of seats) {
+      const price = getSeatPrice(seat, priceTiers);
+      if (Number.isFinite(price) && price > 0) values.add(price);
+    }
+    return Array.from(values).sort((a, b) => a - b);
+  }, [seats, priceTiers]);
+  const priceColorMap = useMemo(() => {
+    const map = new Map<number, string>();
+    uniquePrices.forEach((price, index) => {
+      map.set(price, PRICE_COLORS[index % PRICE_COLORS.length]);
+    });
+    return map;
+  }, [uniquePrices]);
   const selectedTotal = useMemo(() => {
     return seats
       .filter((s) => selectedSeatIds.includes(s.id))
-      .reduce((sum, s) => sum + (priceTiers[s.seat_type] ?? 0), 0);
+      .reduce((sum, s) => sum + getSeatPrice(s, priceTiers), 0);
   }, [seats, selectedSeatIds, priceTiers]);
   const takenSeats = useMemo(
     () =>
@@ -86,8 +107,20 @@ export default function SeatPicker({ seats, selectedSeatIds, onToggleSeat, price
         }),
     [seats],
   );
+  const selectedSeats = useMemo(
+    () =>
+      seats
+        .filter((seat) => selectedSeatIds.includes(seat.id))
+        .sort((a, b) => {
+          const sectionCompare = (a.section || "").localeCompare(b.section || "", undefined, { numeric: true });
+          if (sectionCompare !== 0) return sectionCompare;
+          const rowCompare = (a.row_label || "").localeCompare(b.row_label || "", undefined, { numeric: true });
+          if (rowCompare !== 0) return rowCompare;
+          return a.seat_number - b.seat_number;
+        }),
+    [seats, selectedSeatIds],
+  );
   const parsedLayoutMeta = (layoutMeta || {}) as LayoutMeta;
-  const customSectionColors = useMemo(() => parsedLayoutMeta.type_colors || {}, [parsedLayoutMeta.type_colors]);
 
   const defaultWidth = 900;
   const defaultHeight = 500;
@@ -228,190 +261,276 @@ export default function SeatPicker({ seats, selectedSeatIds, onToggleSeat, price
       .sort((a, b) => a.minY - b.minY);
   }, [normalizedSeats]);
 
+  useEffect(() => {
+    const node = mapViewportRef.current;
+    if (!node) return;
+
+    const updateWidth = () => {
+      setAvailableMapWidth(node.clientWidth);
+    };
+
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const mapScale = useMemo(() => {
+    if (availableMapWidth <= 0) return 1;
+    return Math.min(1, availableMapWidth / viewport.width);
+  }, [availableMapWidth, viewport.width]);
+
   return (
     <div className="space-y-4">
-      <div className="overflow-auto card p-2">
-        <div
-          role="img"
-          aria-label="Seat map"
-          style={{
-            position: "relative",
-            width: viewport.width,
-            height: viewport.height,
-            background: parsedLayoutMeta.background || "#f8fafc",
-            border: "1px solid #cbd5e1",
-          }}
-        >
+      <div className="card p-2">
+        <div ref={mapViewportRef} className="w-full overflow-auto">
           <div
             style={{
-              position: "absolute",
-              top: stageConfig.y + viewport.offsetY,
-              left: stageConfig.x + viewport.offsetX,
-              width: stageConfig.width,
-              height: stageConfig.height,
-              textAlign: "center",
-              background: stageConfig.background,
-              color: stageConfig.color,
-              borderRadius: 10,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "10px 12px",
-              fontSize: 14,
-              fontWeight: 700,
-              letterSpacing: 1,
+              width: Math.ceil(viewport.width * mapScale),
+              height: Math.ceil(viewport.height * mapScale),
             }}
           >
-            {stageConfig.label}
-          </div>
-          {normalizedSeats.map((seat) => {
-            const selected = selectedSeatIds.includes(seat.id);
-            const disabled = seat.status !== "open";
-            const baseColor = getSeatColor(seat.section || "General", customSectionColors);
-            const background = selected ? "#16a34a" : disabled ? (seat.status === "booked" ? "#94a3b8" : "#ef4444") : baseColor;
-            const textColor = selected || !disabled ? "#ffffff" : seat.status === "booked" ? "#334155" : "#f1f5f9";
-
-            return (
-              <button
-                key={seat.id}
-                type="button"
-                className={`absolute flex items-center justify-center rounded-full text-[10px] font-bold ${
-                  disabled ? "cursor-not-allowed" : "cursor-pointer"
-                }`}
-                style={{
-                  left: seat.cx + viewport.offsetX - seatRadius,
-                  top: seat.cy + viewport.offsetY - seatRadius,
-                  width: seatRadius * 2,
-                  height: seatRadius * 2,
-                  background,
-                  color: textColor,
-                  border: selected ? "2px solid #86efac" : "1px solid rgba(15, 23, 42, 0.25)",
-                  opacity: disabled ? 0.85 : 1,
-                }}
-                disabled={disabled}
-                onClick={() => onToggleSeat(seat.id)}
-                title={`${seat.section} ${seat.row_label}-${seat.seat_number}`}
-              >
-                {seat.seat_number}
-              </button>
-            );
-          })}
-          {sectionLabels.map((section, idx) => (
-            <span
-              key={`section-${section.name}-${Math.round(section.minY)}-${idx}`}
+            <div
+              role="img"
+              aria-label="Seat map"
               style={{
-                position: "absolute",
-                left: (section.minX + section.maxX) / 2 + viewport.offsetX,
-                transform: "translateX(-50%)",
-                top: section.minY + viewport.offsetY - sectionLabelVerticalOffset,
-                fontSize: 12,
-                lineHeight: 1,
-                fontWeight: 700,
-                color: "#1e293b",
-                background: "rgba(255, 255, 255, 0.9)",
+                position: "relative",
+                width: viewport.width,
+                height: viewport.height,
+                background: parsedLayoutMeta.background || "#f8fafc",
                 border: "1px solid #cbd5e1",
-                borderRadius: 999,
-                padding: "4px 8px",
-                zIndex: 2,
-                whiteSpace: "nowrap",
+                transform: `scale(${mapScale})`,
+                transformOrigin: "top left",
               }}
             >
-              {section.name}
-            </span>
-          ))}
-          {rowLabels.map((row, idx) => {
-            const isNumericRowLabel = /^\d+$/.test(row.label.trim());
-            const rowText = isNumericRowLabel ? `${tr("row")} ${row.label}` : row.label;
-            const rowSpanWidth = row.maxX - row.minX;
-            const showRightLabel = rowSpanWidth > 56;
+              <div
+                style={{
+                  position: "absolute",
+                  top: stageConfig.y + viewport.offsetY,
+                  left: stageConfig.x + viewport.offsetX,
+                  width: stageConfig.width,
+                  height: stageConfig.height,
+                  textAlign: "center",
+                  background: stageConfig.background,
+                  color: stageConfig.color,
+                  borderRadius: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "10px 12px",
+                  fontSize: 16,
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                }}
+              >
+                {stageConfig.label}
+              </div>
+              {normalizedSeats.map((seat) => {
+                const selected = selectedSeatIds.includes(seat.id);
+                const disabled = seat.status !== "open";
+                const baseColor = getPriceColor(getSeatPrice(seat, priceTiers), priceColorMap);
+                const currentSeatRadius = selected ? seatRadius + 2 : seatRadius;
+                const background = disabled ? (seat.status === "booked" ? bookedSeatColor : paidSeatColor) : baseColor;
+                const textColor = !disabled
+                  ? "#ffffff"
+                  : seat.status === "booked" && !adminView
+                    ? "#334155"
+                    : "#f9fafb";
 
-            return (
-              <div key={`row-${row.label}-${Math.round(row.centerY)}-${Math.round(row.minX)}-${idx}`}>
+                return (
+                  <button
+                    key={seat.id}
+                    type="button"
+                    className={`absolute flex items-center justify-center rounded-full text-[12px] font-bold ${
+                      disabled ? "cursor-not-allowed" : "cursor-pointer"
+                    }`}
+                    style={{
+                      left: seat.cx + viewport.offsetX - currentSeatRadius,
+                      top: seat.cy + viewport.offsetY - currentSeatRadius,
+                      width: currentSeatRadius * 2,
+                      height: currentSeatRadius * 2,
+                      background,
+                      color: textColor,
+                      border: selected ? "2px solid #111827" : "1px solid rgba(15, 23, 42, 0.25)",
+                      fontSize: selected ? 13 : 12,
+                      fontWeight: selected ? 800 : 700,
+                      boxShadow: selected ? "0 0 0 2px rgba(15, 23, 42, 0.15)" : "none",
+                      zIndex: selected ? 3 : 1,
+                      opacity: disabled ? 0.85 : 1,
+                    }}
+                    disabled={disabled}
+                    onClick={() => onToggleSeat(seat.id)}
+                    title={formatSeatLabel(seat)}
+                  >
+                    {seat.seat_number}
+                    {selected ? (
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: -4,
+                          right: -4,
+                          width: 14,
+                          height: 14,
+                          borderRadius: "9999px",
+                          background: "#111827",
+                          color: "#ffffff",
+                          fontSize: 11,
+                          lineHeight: "14px",
+                          fontWeight: 800,
+                          textAlign: "center",
+                          boxShadow: "0 0 0 1px #ffffff",
+                        }}
+                        aria-hidden="true"
+                      >
+                        ✓
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+              {sectionLabels.map((section, idx) => (
                 <span
+                  key={`section-${section.name}-${Math.round(section.minY)}-${idx}`}
                   style={{
                     position: "absolute",
-                    left: row.minX + viewport.offsetX - seatRadius - leftRowLabelGap,
-                    transform: "translateX(-100%)",
-                    top: row.centerY + viewport.offsetY - rowLabelVerticalOffset,
-                    fontSize: 12,
+                    left: (section.minX + section.maxX) / 2 + viewport.offsetX,
+                    transform: "translateX(-50%)",
+                    top: section.minY + viewport.offsetY - sectionLabelVerticalOffset,
+                    fontSize: 14,
                     lineHeight: 1,
                     fontWeight: 700,
-                    color: "#334155",
-                    background: "rgba(248, 250, 252, 0.9)",
-                    borderRadius: 6,
-                    padding: "2px 4px",
+                    color: "#1e293b",
+                    background: "rgba(255, 255, 255, 0.9)",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 999,
+                    padding: "4px 8px",
                     zIndex: 2,
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  {rowText}
+                  {section.name}
                 </span>
-                {showRightLabel ? (
-                  <span
-                    style={{
-                      position: "absolute",
-                      left: row.maxX + viewport.offsetX + seatRadius + 10,
-                      top: row.centerY + viewport.offsetY - rowLabelVerticalOffset,
-                      fontSize: 12,
-                      lineHeight: 1,
-                      fontWeight: 700,
-                      color: "#334155",
-                      background: "rgba(248, 250, 252, 0.9)",
-                      borderRadius: 6,
-                      padding: "2px 4px",
-                      zIndex: 2,
-                    }}
-                  >
-                    {rowText}
-                  </span>
-                ) : null}
-              </div>
-            );
-          })}
+              ))}
+              {rowLabels.map((row, idx) => {
+                const isNumericRowLabel = /^\d+$/.test(row.label.trim());
+                const rowText = isNumericRowLabel ? `${tr("row")} ${row.label}` : row.label;
+                const rowSpanWidth = row.maxX - row.minX;
+                const showRightLabel = rowSpanWidth > 56;
+
+                return (
+                  <div key={`row-${row.label}-${Math.round(row.centerY)}-${Math.round(row.minX)}-${idx}`}>
+                    <span
+                      style={{
+                        position: "absolute",
+                        left: row.minX + viewport.offsetX - seatRadius - leftRowLabelGap,
+                        transform: "translateX(-100%)",
+                        top: row.centerY + viewport.offsetY - rowLabelVerticalOffset,
+                        fontSize: 14,
+                        lineHeight: 1,
+                        fontWeight: 700,
+                        color: "#334155",
+                        background: "rgba(248, 250, 252, 0.9)",
+                        borderRadius: 6,
+                        padding: "2px 4px",
+                        zIndex: 2,
+                      }}
+                    >
+                      {rowText}
+                    </span>
+                    {showRightLabel ? (
+                      <span
+                        style={{
+                          position: "absolute",
+                          left: row.maxX + viewport.offsetX + seatRadius + 10,
+                          top: row.centerY + viewport.offsetY - rowLabelVerticalOffset,
+                          fontSize: 14,
+                          lineHeight: 1,
+                          fontWeight: 700,
+                          color: "#334155",
+                          background: "rgba(248, 250, 252, 0.9)",
+                          borderRadius: 6,
+                          padding: "2px 4px",
+                          zIndex: 2,
+                        }}
+                      >
+                        {rowText}
+                      </span>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
-      <div className="card p-3 text-xs">
-        <p className="mb-2 font-semibold">{tr("typeColors")}</p>
+      <div className="card p-3 text-sm">
         <div className="flex flex-wrap gap-2">
-          {sectionLegend.map((sectionName) => {
-            const color = getSeatColor(sectionName, customSectionColors);
+          {uniquePrices.map((price) => {
+            const color = getPriceColor(price, priceColorMap);
             return (
-              <span key={sectionName} className="inline-flex items-center gap-2 rounded border border-[var(--border)] px-2 py-1">
+              <span key={`price-${price}`} className="inline-flex items-center gap-2 rounded border border-[var(--border)] px-2 py-1">
                 <span className="inline-block h-3 w-3 rounded" style={{ background: color }} />
-                {sectionName}
+                {price} ₸
               </span>
             );
           })}
           <span className="inline-flex items-center gap-2 rounded border border-[var(--border)] px-2 py-1">
-            <span className="inline-block h-3 w-3 rounded bg-slate-400" />
+            <span className="inline-block h-3 w-3 rounded" style={{ background: bookedSeatColor }} />
             {tr("bookedSeat")}
           </span>
-          <span className="inline-flex items-center gap-2 rounded border border-[var(--border)] px-2 py-1">
-            <span className="inline-block h-3 w-3 rounded bg-red-500" />
-            {tr("paidSeat")}
-          </span>
-          <span className="inline-flex items-center gap-2 rounded border border-[var(--border)] px-2 py-1">
-            <span className="inline-block h-3 w-3 rounded bg-green-600" />
-            {tr("selectedSeat")}
-          </span>
+          {adminView ? (
+            <span className="inline-flex items-center gap-2 rounded border border-[var(--border)] px-2 py-1">
+              <span className="inline-block h-3 w-3 rounded" style={{ background: paidSeatColor }} />
+              {tr("paidSeat")}
+            </span>
+          ) : null}
         </div>
       </div>
       <div className="card p-3 text-sm">
-        <p>
-          {tr("selectedSeats")}: <b>{selectedSeatIds.length}</b>
-        </p>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <p>
+            {tr("selectedSeats")}: <b>{selectedSeatIds.length}</b>
+          </p>
+          {onClearSelection ? (
+            <button
+              type="button"
+              className="button button-secondary !px-3 !py-1 text-sm"
+              onClick={onClearSelection}
+              disabled={selectedSeatIds.length === 0}
+            >
+              {tr("clearSelection")}
+            </button>
+          ) : null}
+        </div>
         <p>
           {tr("total")}: <b>{selectedTotal.toFixed(2)} ₸</b>
         </p>
       </div>
+      {adminView ? (
+        <div className="card p-3 text-sm">
+          <p className="mb-2 font-semibold">{tr("takenPlaces")}</p>
+          {takenSeats.length === 0 ? (
+            <p className="muted">{tr("noTakenPlaces")}</p>
+          ) : (
+            <div className="flex flex-wrap gap-2 text-sm">
+              {takenSeats.map((seat) => (
+                <span key={`taken-${seat.id}`} className="rounded border border-[var(--border)] px-2 py-1">
+                  {formatSeatLabel(seat)}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
       <div className="card p-3 text-sm">
-        <p className="mb-2 font-semibold">{tr("takenPlaces")}</p>
-        {takenSeats.length === 0 ? (
-          <p className="muted">{tr("noTakenPlaces")}</p>
+        <p className="mb-2 font-semibold">{tr("selectedSeat")}</p>
+        {selectedSeats.length === 0 ? (
+          <p className="muted">{tr("noSelectedSeats")}</p>
         ) : (
-          <div className="flex flex-wrap gap-2 text-xs">
-            {takenSeats.map((seat) => (
-              <span key={`taken-${seat.id}`} className="rounded border border-[var(--border)] px-2 py-1">
-                {`${seat.section || "General"} ${seat.row_label}-${seat.seat_number}`}
+          <div className="flex flex-wrap gap-2 text-sm">
+            {selectedSeats.map((seat) => (
+              <span key={`selected-${seat.id}`} className="rounded border border-[var(--border)] px-2 py-1">
+                {formatSeatLabel(seat)}
               </span>
             ))}
           </div>

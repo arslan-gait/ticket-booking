@@ -7,8 +7,8 @@ router = DefaultRouter()
 router.register(r'bookings', BookingViewSet)
 
 urlpatterns = [
-    path('', include(router.urls)),
     path('bookings/create/', create_booking, name='create-booking'),
     path('events/<int:event_id>/seats/', event_seat_availability, name='event-seats'),
     path('tickets/verify/', verify_ticket, name='verify-ticket'),
+    path('', include(router.urls)),
 ]

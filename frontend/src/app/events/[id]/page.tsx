@@ -1,5 +1,6 @@
 import EventBookingPanel from "@/components/event-booking-panel";
 import { getEvent, getEventSeats } from "@/lib/api";
+import { formatDateTime } from "@/lib/datetime";
 import { t } from "@/lib/i18n";
 import { getServerLanguage } from "@/lib/i18n-server";
 
@@ -14,7 +15,7 @@ export default async function EventPage({ params }: { params: Promise<Params> })
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">{event.name}</h1>
-      <p className="muted">{new Date(event.date).toLocaleString()}</p>
+      <p className="muted">{formatDateTime(event.date)}</p>
       <p className="muted">
         {t(lang, "venueLabel")}: {seatData.venue.name}
       </p>

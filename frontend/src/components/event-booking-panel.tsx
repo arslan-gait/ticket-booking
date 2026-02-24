@@ -22,19 +22,38 @@ export default function EventBookingPanel({ eventId, seats, priceTiers, layoutMe
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const hasSelectedSeats = selectedSeatIds.length > 0;
+  const hasCustomerName = customerName.trim().length > 1;
+  const hasPhone = phone.trim().length > 5;
   const canSubmit = useMemo(
-    () => selectedSeatIds.length > 0 && customerName.trim().length > 1 && phone.trim().length > 5,
-    [selectedSeatIds, customerName, phone],
+    () => hasSelectedSeats && hasCustomerName && hasPhone,
+    [hasCustomerName, hasPhone, hasSelectedSeats],
   );
 
   function toggleSeat(seatId: number) {
+    setError("");
     setSelectedSeatIds((prev) =>
       prev.includes(seatId) ? prev.filter((id) => id !== seatId) : [...prev, seatId],
     );
   }
 
+  function clearSelections() {
+    setError("");
+    setSelectedSeatIds([]);
+  }
+
   async function submit() {
-    if (!canSubmit || loading) return;
+    if (loading) return;
+    if (!canSubmit) {
+      if (!hasSelectedSeats) {
+        setError(tr("selectSeatsRequired"));
+      } else if (!hasCustomerName) {
+        setError(tr("nameRequired"));
+      } else {
+        setError(tr("phoneRequired"));
+      }
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -58,8 +77,10 @@ export default function EventBookingPanel({ eventId, seats, priceTiers, layoutMe
         seats={seats}
         selectedSeatIds={selectedSeatIds}
         onToggleSeat={toggleSeat}
+        onClearSelection={clearSelections}
         priceTiers={priceTiers}
         layoutMeta={layoutMeta}
+        adminView={false}
       />
       <div className="card space-y-3 p-4">
         <h3 className="font-semibold">{tr("yourDetails")}</h3>
@@ -67,15 +88,21 @@ export default function EventBookingPanel({ eventId, seats, priceTiers, layoutMe
           className="input-field"
           placeholder={tr("fullName")}
           value={customerName}
-          onChange={(e) => setCustomerName(e.target.value)}
+          onChange={(e) => {
+            setError("");
+            setCustomerName(e.target.value);
+          }}
         />
         <input
           className="input-field"
           placeholder={tr("whatsappNumber")}
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => {
+            setError("");
+            setPhone(e.target.value);
+          }}
         />
-        <button className="button button-primary" disabled={!canSubmit || loading} onClick={submit}>
+        <button className="button button-primary" disabled={loading} onClick={submit}>
           {loading ? tr("createBooking") : tr("confirmBooking")}
         </button>
         {error && <p className="text-sm text-red-400">{error}</p>}

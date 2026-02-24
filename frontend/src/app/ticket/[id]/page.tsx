@@ -1,5 +1,6 @@
 import TicketQr from "@/components/ticket-qr";
 import { getBooking } from "@/lib/api";
+import { formatDateTime } from "@/lib/datetime";
 import { t } from "@/lib/i18n";
 import { getServerLanguage } from "@/lib/i18n-server";
 
@@ -32,7 +33,7 @@ export default async function TicketPage({ params }: { params: Promise<Params> }
           {t(lang, "event")}: <b>{booking.event_name}</b>
         </p>
         <p>
-          {t(lang, "date")}: <b>{new Date(booking.event_date).toLocaleString()}</b>
+          {t(lang, "date")}: <b>{formatDateTime(booking.event_date)}</b>
         </p>
       </div>
       {booking.ticket?.qr_data ? (

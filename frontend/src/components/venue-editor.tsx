@@ -40,11 +40,11 @@ function toFiniteNumber(value: unknown, fallback: number): number {
 }
 
 const DEFAULT_SEAT_TYPE_COLORS: Record<string, string> = {
-  regular: "#2563eb",
-  vip: "#f59e0b",
-  balcony: "#facc15",
-  box: "#64748b",
-  box_upper: "#14b8a6",
+  regular: "#000000",
+  vip: "#000000",
+  balcony: "#000000",
+  box: "#000000",
+  box_upper: "#000000",
 };
 
 export default function VenueEditor({ seats, layoutMeta, rowPrefix }: Props) {
@@ -147,7 +147,7 @@ export default function VenueEditor({ seats, layoutMeta, rowPrefix }: Props) {
           <div
             style={{
               // Color by seat type (vip/regular/balcony/...)
-              background: seatTypeColors[(seat.seatType || "regular").toLowerCase()] || "#64748b",
+              background: seatTypeColors[(seat.seatType || "regular").toLowerCase()] || "#000000",
               width: "100%",
               height: "100%",
               borderRadius: "9999px",

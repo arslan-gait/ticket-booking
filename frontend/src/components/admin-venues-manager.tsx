@@ -36,11 +36,11 @@ const defaultLayout = {
   height: 500,
   background: "#f8fafc",
   type_colors: {
-    regular: "#2563eb",
-    vip: "#f59e0b",
-    balcony: "#facc15",
-    box: "#64748b",
-    box_upper: "#14b8a6",
+    regular: "#000000",
+    vip: "#000000",
+    balcony: "#000000",
+    box: "#000000",
+    box_upper: "#000000",
   },
   stage: {
     x: 120,
