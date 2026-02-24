@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppSettings } from "@/components/app-settings-provider";
-import type { Language } from "@/lib/i18n";
 
 export default function TopbarMenu() {
   const router = useRouter();
   const pathname = usePathname();
-  const { lang, theme, setLang, toggleTheme, tr } = useAppSettings();
+  const { theme, toggleTheme, tr } = useAppSettings();
   const navItems = [
     { href: "/", label: tr("navEvents") },
     { href: "/admin", label: tr("navAdmin") },
@@ -17,11 +16,6 @@ export default function TopbarMenu() {
   function isActivePath(href: string): boolean {
     if (href === "/") return pathname === "/";
     return pathname === href || pathname.startsWith(`${href}/`);
-  }
-
-  function handleLangChange(nextLang: Language) {
-    setLang(nextLang);
-    router.refresh();
   }
 
   function handleThemeToggle() {
@@ -54,20 +48,6 @@ export default function TopbarMenu() {
         })}
       </div>
       <div className="order-2 ml-auto flex items-center gap-2 sm:order-3">
-        <label htmlFor="topbar-language" className="sr-only">
-          {tr("language")}
-        </label>
-        <select
-          id="topbar-language"
-          className="input-field h-9 w-20 px-2 text-sm"
-          value={lang}
-          onChange={(e) => handleLangChange(e.target.value as Language)}
-          aria-label={tr("language")}
-          title={tr("language")}
-        >
-          <option value="ru">RU</option>
-          <option value="en">EN</option>
-        </select>
         <button
           className="button button-secondary h-9 px-3 text-sm whitespace-nowrap"
           onClick={handleThemeToggle}

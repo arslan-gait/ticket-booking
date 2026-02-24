@@ -1,9 +1,8 @@
 import { cookies } from "next/headers";
-import { normalizeLanguage, normalizeTheme, type Language, type Theme } from "@/lib/i18n";
+import { normalizeTheme, type Language, type Theme } from "@/lib/i18n";
 
 export async function getServerLanguage(): Promise<Language> {
-  const cookieStore = await cookies();
-  return normalizeLanguage(cookieStore.get("app_lang")?.value);
+  return "ru";
 }
 
 export async function getServerTheme(): Promise<Theme> {
