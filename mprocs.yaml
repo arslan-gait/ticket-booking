@@ -1,10 +1,3 @@
 procs:
-  backend:
-    cwd: backend
-    shell: zsh
-    cmd: source .venv/bin/activate && python manage.py runserver
-
-  frontend:
-    cwd: frontend
-    shell: zsh
-    cmd: npm run dev
+  backend: "cd backend && source .venv/bin/activate && python manage.py runserver"
+  frontend: "cd frontend && npm run dev"
