@@ -51,7 +51,7 @@ Install `mprocs` first (choose one):
 
 ```bash
 # macOS (Homebrew)
-brew install pvolok/mprocs/mprocs
+brew install mprocs
 ```
 
 ```bash
