@@ -1,0 +1,25 @@
+---
+description: Ban magic domain strings; use enums and constants
+alwaysApply: true
+---
+
+# No Magic Literals
+
+- Do not use plain string literals for domain values in runtime code.
+- Represent state values with enums/constants (for Django models, prefer `TextChoices`).
+- Reuse constants for repeated response keys and internal error codes.
+- Centralize messages and keys in dedicated constants modules; keep payload shape stable.
+- If a value appears in 2+ places, extract it to a shared constant.
+- Keep migrations frozen; do not retrofit old migration literals unless explicitly required.
+
+## Example
+
+```python
+# BAD
+if booking.status == "paid":
+    data = {"valid": True, "error": "Already scanned"}
+
+# GOOD
+if booking.status == BookingStatus.PAID:
+    data = {VALID_KEY: True, ERROR_KEY: TICKET_ALREADY_SCANNED_MSG}
+```

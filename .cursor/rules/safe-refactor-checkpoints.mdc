@@ -1,0 +1,25 @@
+---
+description: Safe incremental refactor process and verification checkpoints
+alwaysApply: true
+---
+
+# Safe Refactor Checkpoints
+
+- Refactor incrementally: small PR-sized changes, one concern at a time.
+- Before structural refactors, add or update characterization tests for current behavior.
+- After each meaningful refactor step:
+  - run relevant tests
+  - run lint/diagnostics for touched files
+  - verify response contracts (keys/types/status codes) are unchanged
+- Prefer extracting pure helpers first, then move orchestration to service modules.
+- Never perform destructive git operations unless explicitly requested.
+
+## API Contract Reminder
+
+```python
+# Keep response structure stable during safe refactor.
+return Response({
+    ERROR_KEY: TAKEN_SEATS_MSG,
+    TAKEN_SEAT_IDS_KEY: taken_ids,
+}, status=HTTP_409_CONFLICT)
+```

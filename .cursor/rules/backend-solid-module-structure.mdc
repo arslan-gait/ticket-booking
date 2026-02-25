@@ -1,0 +1,29 @@
+---
+description: Enforce SOLID design and small-module backend structure
+alwaysApply: true
+---
+
+# Backend SOLID And Module Structure
+
+- Keep modules and functions small and single-purpose (target: ~200 lines per file, ~40 lines per function where practical).
+- Prefer adding focused modules in one package folder (for example `backend/bookings/domain/`) instead of expanding large files.
+- Split responsibilities by layer:
+  - views/controllers: request/response orchestration only
+  - services/domain: business logic and policies
+  - models: persistence and minimal domain behavior
+- Avoid duplicate logic; extract shared helpers/constants and reuse from one source of truth.
+- Keep dependencies directional: controllers may depend on services; services/domain should not depend on framework response objects.
+- Preserve behavior for safe refactors (no API shape or status code changes unless explicitly requested).
+
+## Example
+
+```python
+# BAD: view handles business policy inline
+if booking.status == BookingStatus.CANCELLED:
+    return Response({ERROR_KEY: BOOKING_CANCELLED_MSG})
+
+# GOOD: view delegates policy to domain helper
+is_valid, error_payload = validate_ticket_state(ticket)
+if not is_valid:
+    return Response(error_payload)
+```
