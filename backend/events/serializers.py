@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import serializers
 
 from .models import Event, Seat, Venue
@@ -14,7 +15,7 @@ class VenueListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Venue
-        fields = ['id', 'name', 'description', 'seat_count', 'created_at']
+        fields = ['id', 'name', 'address_line', 'description', 'seat_count', 'created_at']
 
 
 class VenueDetailSerializer(serializers.ModelSerializer):
@@ -22,7 +23,7 @@ class VenueDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Venue
-        fields = ['id', 'name', 'description', 'layout_meta', 'seats', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'address_line', 'description', 'layout_meta', 'seats', 'created_at', 'updated_at']
 
 
 class VenueWriteSerializer(serializers.ModelSerializer):
@@ -30,7 +31,7 @@ class VenueWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Venue
-        fields = ['id', 'name', 'description', 'layout_meta', 'seats']
+        fields = ['id', 'name', 'address_line', 'description', 'layout_meta', 'seats']
 
     @staticmethod
     def _create_seats(venue, seats_data):
@@ -46,6 +47,7 @@ class VenueWriteSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         seats_data = validated_data.pop('seats', None)
         instance.name = validated_data.get('name', instance.name)
+        instance.address_line = validated_data.get('address_line', instance.address_line)
         instance.description = validated_data.get('description', instance.description)
         instance.layout_meta = validated_data.get('layout_meta', instance.layout_meta)
         instance.save()
@@ -59,6 +61,13 @@ class VenueWriteSerializer(serializers.ModelSerializer):
 
 class EventListSerializer(serializers.ModelSerializer):
     venue_name = serializers.CharField(source='venue.name', read_only=True)
+    image = serializers.SerializerMethodField()
+
+    @staticmethod
+    def get_image(obj):
+        if not obj.image:
+            return None
+        return f"{settings.BACKEND_BASE_URL}{obj.image.url}"
 
     class Meta:
         model = Event
@@ -67,6 +76,13 @@ class EventListSerializer(serializers.ModelSerializer):
 
 class EventDetailSerializer(serializers.ModelSerializer):
     venue = VenueDetailSerializer(read_only=True)
+    image = serializers.SerializerMethodField()
+
+    @staticmethod
+    def get_image(obj):
+        if not obj.image:
+            return None
+        return f"{settings.BACKEND_BASE_URL}{obj.image.url}"
 
     class Meta:
         model = Event

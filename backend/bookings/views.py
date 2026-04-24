@@ -167,6 +167,7 @@ def event_seat_availability(request, event_id):
         VENUE_KEY: {
             ID_KEY: event.venue.id,
             NAME_KEY: event.venue.name,
+            'address_line': event.venue.address_line,
             LAYOUT_META_KEY: event.venue.layout_meta,
         },
         PRICE_TIERS_KEY: event.price_tiers,

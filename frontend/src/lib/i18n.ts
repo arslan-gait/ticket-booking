@@ -42,6 +42,7 @@ export const dictionary = {
     whatsapp: "WhatsApp",
     event: "Событие",
     venue: "Площадка",
+    addressLine: "Адрес",
     status: "Статус",
     manualPaymentTitle: "Инструкция по оплате",
     manualPaymentText:
@@ -101,6 +102,7 @@ export const dictionary = {
     createNewVenue: "Создать новую площадку",
     new: "Новая",
     venueName: "Название площадки",
+    venueAddressLine: "Адрес площадки",
     layoutMeta: "JSON метаданных схемы",
     seatsJson: "JSON массива мест",
     generateGrid: "Сгенерировать сетку на 48 мест",
@@ -168,6 +170,7 @@ export const dictionary = {
     whatsapp: "WhatsApp",
     event: "Event",
     venue: "Venue",
+    addressLine: "Address",
     status: "Status",
     manualPaymentTitle: "Payment instructions",
     manualPaymentText:
@@ -227,6 +230,7 @@ export const dictionary = {
     createNewVenue: "Create new venue",
     new: "New",
     venueName: "Venue name",
+    venueAddressLine: "Venue address",
     layoutMeta: "Layout metadata JSON",
     seatsJson: "Seats JSON array",
     generateGrid: "Generate 48-seat grid",
@@ -265,6 +269,8 @@ export const dictionary = {
 } as const;
 
 export type I18nKey = keyof (typeof dictionary)["ru"];
+const TRANSLATABLE_BOOKING_STATUSES = ["pending", "paid", "cancelled"] as const;
+type TranslatableBookingStatus = (typeof TRANSLATABLE_BOOKING_STATUSES)[number];
 
 export function t(lang: Language, key: I18nKey, params?: Record<string, string | number>): string {
   let text: string = dictionary[lang][key] ?? dictionary.ru[key];
@@ -273,4 +279,13 @@ export function t(lang: Language, key: I18nKey, params?: Record<string, string |
     text = text.replaceAll(`{${paramKey}}`, String(value));
   }
   return text;
+}
+
+export function translateBookingStatus(lang: Language, status: string): string {
+  const normalizedStatus = status.trim().toLowerCase();
+  if (TRANSLATABLE_BOOKING_STATUSES.includes(normalizedStatus as TranslatableBookingStatus)) {
+    return t(lang, normalizedStatus as TranslatableBookingStatus);
+  }
+
+  return status;
 }

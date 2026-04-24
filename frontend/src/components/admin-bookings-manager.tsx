@@ -80,6 +80,13 @@ export default function AdminBookingsManager() {
 
   const normalizedWhatsappFilter = whatsappFilter.replace(/\D/g, "");
   const normalizeStatus = (status: string) => status.trim().toLowerCase();
+  const getTranslatedStatus = (status: string) => {
+    const normalizedStatus = normalizeStatus(status);
+    if (normalizedStatus === "pending" || normalizedStatus === "paid" || normalizedStatus === "cancelled") {
+      return tr(normalizedStatus);
+    }
+    return status;
+  };
   const filteredBookings = bookings.filter((booking) => {
     const matchesName = booking.customer_name.toLowerCase().includes(nameFilter.toLowerCase().trim());
     const bookingPhone = booking.phone_number.replace(/\D/g, "");
@@ -187,7 +194,7 @@ export default function AdminBookingsManager() {
                   {booking.total_price} ₸
                 </p>
                 <p className="muted text-xs">
-                  {tr("status")}: {booking.status}
+                  {tr("status")}: {getTranslatedStatus(booking.status)}
                 </p>
               </div>
               <div className="flex gap-2">

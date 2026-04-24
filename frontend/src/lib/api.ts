@@ -64,6 +64,7 @@ type Paginated<T> = { results: T[] };
 export type VenueListItem = {
   id: number;
   name: string;
+  address_line: string;
   description: string;
   seat_count: number;
 };
@@ -71,6 +72,7 @@ export type VenueListItem = {
 export type VenueDetail = {
   id: number;
   name: string;
+  address_line: string;
   description: string;
   layout_meta: Record<string, unknown>;
   seats: Array<{
@@ -116,6 +118,7 @@ export type EventSeatsResponse = {
   venue: {
     id: number;
     name: string;
+    address_line: string;
     layout_meta: Record<string, unknown>;
   };
   price_tiers: Record<string, number>;
@@ -220,6 +223,7 @@ export async function getVenue(id: number): Promise<VenueDetail> {
 
 export async function createVenue(input: {
   name: string;
+  address_line: string;
   description: string;
   layout_meta: Record<string, unknown>;
   seats: Array<{
@@ -242,6 +246,7 @@ export async function updateVenue(
   id: number,
   input: Partial<{
     name: string;
+    address_line: string;
     description: string;
     layout_meta: Record<string, unknown>;
     seats: Array<{
@@ -286,8 +291,10 @@ export async function getBooking(token: string) {
     status: string;
     total_price: string;
     event_name: string;
+    event_image: string | null;
     event_date: string;
     venue_name: string;
+    venue_address_line: string;
     items: Array<{ seat_detail: { section: string; row_label: string; seat_number: number } }>;
     ticket?: { qr_data: string; is_scanned: boolean; scanned_at: string | null };
   }>(`/bookings/public/${token}/`);

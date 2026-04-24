@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import serializers
 
 from events.serializers import SeatSerializer
@@ -39,14 +40,22 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     items = BookingItemSerializer(many=True, read_only=True)
     ticket = TicketSerializer(read_only=True)
     event_name = serializers.CharField(source='event.name', read_only=True)
+    event_image = serializers.SerializerMethodField()
     event_date = serializers.DateTimeField(source='event.date', read_only=True)
     venue_name = serializers.CharField(source='event.venue.name', read_only=True)
+    venue_address_line = serializers.CharField(source='event.venue.address_line', read_only=True)
     public_token = serializers.UUIDField(source='ticket.token', read_only=True)
+
+    @staticmethod
+    def get_event_image(obj):
+        if not obj.event.image:
+            return None
+        return f"{settings.BACKEND_BASE_URL}{obj.event.image.url}"
 
     class Meta:
         model = Booking
         fields = [
-            'id', 'event', 'event_name', 'event_date', 'venue_name',
+            'id', 'event', 'event_name', 'event_image', 'event_date', 'venue_name', 'venue_address_line',
             'customer_name', 'phone_number', 'status', 'total_price',
             'items', 'ticket', 'public_token', 'created_at',
         ]

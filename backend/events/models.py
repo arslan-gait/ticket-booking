@@ -3,6 +3,7 @@ from django.db import models
 
 class Venue(models.Model):
     name = models.CharField(max_length=255)
+    address_line = models.CharField(max_length=255, blank=True, default='')
     description = models.TextField(blank=True, default='')
     layout_meta = models.JSONField(
         default=dict, blank=True,

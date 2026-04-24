@@ -66,6 +66,7 @@ export default function AdminVenuesManager() {
   const [venues, setVenues] = useState<VenueListItem[]>([]);
   const [selectedVenueId, setSelectedVenueId] = useState<string>("");
   const [name, setName] = useState("");
+  const [addressLine, setAddressLine] = useState("");
   const [description, setDescription] = useState("");
   const [layoutMeta, setLayoutMeta] = useState(JSON.stringify(defaultLayout, null, 2));
   const [seatsJson, setSeatsJson] = useState("[]");
@@ -89,6 +90,7 @@ export default function AdminVenuesManager() {
     if (!id) return;
     const venue = await getVenue(Number(id));
     setName(venue.name);
+    setAddressLine(venue.address_line || "");
     setDescription(venue.description || "");
     setLayoutMeta(JSON.stringify(venue.layout_meta ?? defaultLayout, null, 2));
     setSeatsJson(
@@ -134,6 +136,7 @@ export default function AdminVenuesManager() {
     try {
       const payload = {
         name,
+        address_line: addressLine,
         description,
         layout_meta: parseJson<Record<string, unknown>>(layoutMeta, defaultLayout),
         seats: parseJson<SeatDraft[]>(seatsJson, []),
@@ -157,6 +160,7 @@ export default function AdminVenuesManager() {
   function resetForm() {
     setSelectedVenueId("");
     setName("");
+    setAddressLine("");
     setDescription("");
     setLayoutMeta(JSON.stringify(defaultLayout, null, 2));
     setSeatsJson("[]");
@@ -192,6 +196,12 @@ export default function AdminVenuesManager() {
           placeholder={tr("venueName")}
           value={name}
           onChange={(e) => setName(e.target.value)}
+        />
+        <input
+          className="input-field"
+          placeholder={tr("venueAddressLine")}
+          value={addressLine}
+          onChange={(e) => setAddressLine(e.target.value)}
         />
         <textarea
           className="input-field min-h-20"

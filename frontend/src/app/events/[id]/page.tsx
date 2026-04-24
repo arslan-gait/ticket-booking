@@ -15,10 +15,29 @@ export default async function EventPage({ params }: { params: Promise<Params> })
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">{event.name}</h1>
+      <div className="card p-4">
+        <div className="mx-auto w-full max-w-sm">
+          {event.image ? (
+            <img
+              src={event.image}
+              alt={event.name}
+              className="h-64 w-full rounded-xl object-contain"
+            />
+          ) : (
+            <div className="h-64 w-full rounded-xl bg-[var(--bg)]" />
+          )}
+          <p className="mt-3 text-center text-base font-semibold">{event.name}</p>
+        </div>
+      </div>
       <p className="muted">{<LocalDateTime value={event.date} />}</p>
       <p className="muted">
         {t(lang, "venueLabel")}: {seatData.venue.name}
       </p>
+      {seatData.venue.address_line ? (
+        <p className="muted">
+          {t(lang, "addressLine")}: {seatData.venue.address_line}
+        </p>
+      ) : null}
       <EventBookingPanel
         eventId={eventId}
         seats={seatData.seats}

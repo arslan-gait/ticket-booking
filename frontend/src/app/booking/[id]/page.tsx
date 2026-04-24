@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getBooking } from "@/lib/api";
-import { t } from "@/lib/i18n";
+import { t, translateBookingStatus } from "@/lib/i18n";
 import { getServerLanguage } from "@/lib/i18n-server";
 
 type Params = { id: string };
@@ -15,6 +15,20 @@ export default async function BookingPage({ params }: { params: Promise<Params> 
       <h1 className="text-2xl font-bold">
         {t(lang, "bookingSuccess")}
       </h1>
+      <div className="card p-4">
+        <div className="mx-auto w-full max-w-sm">
+          {booking.event_image ? (
+            <img
+              src={booking.event_image}
+              alt={booking.event_name}
+              className="h-64 w-full rounded-xl object-contain"
+            />
+          ) : (
+            <div className="h-64 w-full rounded-xl bg-[var(--bg)]" />
+          )}
+          <p className="mt-3 text-center text-base font-semibold">{booking.event_name}</p>
+        </div>
+      </div>
       <div className="card space-y-2 p-4">
         <p>
           {t(lang, "name")}: <b>{booking.customer_name}</b>
@@ -28,8 +42,13 @@ export default async function BookingPage({ params }: { params: Promise<Params> 
         <p>
           {t(lang, "venue")}: <b>{booking.venue_name}</b>
         </p>
+        {booking.venue_address_line ? (
+          <p>
+            {t(lang, "addressLine")}: <b>{booking.venue_address_line}</b>
+          </p>
+        ) : null}
         <p>
-          {t(lang, "status")}: <b>{booking.status}</b>
+          {t(lang, "status")}: <b>{translateBookingStatus(lang, booking.status)}</b>
         </p>
         <p>
           {t(lang, "total")}: <b>{booking.total_price} ₸</b>
