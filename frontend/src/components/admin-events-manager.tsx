@@ -11,7 +11,7 @@ import {
   type EventItem,
   type VenueListItem,
 } from "@/lib/api";
-import { formatDateTime } from "@/lib/datetime";
+import LocalDateTime from "@/components/local-date-time";
 import { useAppSettings } from "@/components/app-settings-provider";
 
 type TypePriceRow = {
@@ -56,6 +56,14 @@ function toDateTimeLocalValue(value: string): string {
   if (Number.isNaN(date.getTime())) return "";
   const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return localDate.toISOString().slice(0, 16);
+}
+
+function toUtcIsoStringFromLocalInput(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toISOString();
 }
 
 function getCurrentTimezoneLabel(): string {
@@ -258,7 +266,7 @@ export default function AdminEventsManager() {
       const payload = {
         name: form.name,
         description: form.description,
-        date: form.date,
+        date: toUtcIsoStringFromLocalInput(form.date),
         venue: Number(form.venue),
         price_tiers: priceTiers,
         is_active: form.isActive,
@@ -603,7 +611,7 @@ export default function AdminEventsManager() {
                 <div className="space-y-1.5 text-sm text-[var(--muted)]">
                   <p className="rounded-md bg-[var(--bg)]/60 px-2.5 py-1.5">{event.venue_name}</p>
                   <p className="rounded-md bg-[var(--bg)]/60 px-2.5 py-1.5">
-                    {formatDateTime(event.date)}
+                    {<LocalDateTime value={event.date} />}
                   </p>
                 </div>
 

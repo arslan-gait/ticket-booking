@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getEvents } from "@/lib/api";
-import { formatDateTime } from "@/lib/datetime";
+import LocalDateTime from "@/components/local-date-time";
 import { t } from "@/lib/i18n";
 import { getServerLanguage } from "@/lib/i18n-server";
 
@@ -35,7 +35,7 @@ export default async function HomePage() {
               <div className="space-y-1.5 text-sm text-[var(--muted)]">
                 <p className="rounded-md bg-[var(--bg)]/60 px-2.5 py-1.5">{event.venue_name}</p>
                 <p className="rounded-md bg-[var(--bg)]/60 px-2.5 py-1.5">
-                  {formatDateTime(event.date)}
+                  {<LocalDateTime value={event.date} />}
                 </p>
               </div>
 

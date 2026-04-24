@@ -12,7 +12,7 @@ import {
   type EventItem,
   type EventSeatsResponse,
 } from "@/lib/api";
-import { formatDateTime } from "@/lib/datetime";
+import LocalDateTime from "@/components/local-date-time";
 import SeatPicker from "@/components/seat-picker";
 import { useAppSettings } from "@/components/app-settings-provider";
 
@@ -180,7 +180,7 @@ export default function AdminBookingsManager() {
                   #{booking.id} · {booking.customer_name}
                 </p>
                 <p className="muted text-sm">
-                  {booking.event_name} · {formatDateTime(booking.event_date)}
+                  {booking.event_name} · {<LocalDateTime value={booking.event_date} />}
                 </p>
                 <p className="muted text-sm">
                   {booking.phone_number} · {tr("seatsCount")}: {booking.seat_count} · {tr("total")}:{" "}
