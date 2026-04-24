@@ -1,5 +1,4 @@
 import Link from "next/link";
-import TicketQr from "@/components/ticket-qr";
 import { getBooking } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { getServerLanguage } from "@/lib/i18n-server";
@@ -39,10 +38,6 @@ export default async function BookingPage({ params }: { params: Promise<Params> 
       <div className="card p-4">
         <h2 className="mb-2 text-lg font-semibold">{t(lang, "manualPaymentTitle")}</h2>
         <p className="muted text-sm">{t(lang, "manualPaymentText")}</p>
-      </div>
-      <div className="card space-y-3 p-4">
-        <h2 className="text-lg font-semibold">{t(lang, "yourTicket")}</h2>
-        {booking.ticket?.qr_data ? <TicketQr value={booking.ticket.qr_data} /> : <p className="text-red-400">{t(lang, "qrMissing")}</p>}
       </div>
       <Link className="button button-primary inline-block" href={`/ticket/${booking.public_token}`}>
         {t(lang, "openTicketPage")}
