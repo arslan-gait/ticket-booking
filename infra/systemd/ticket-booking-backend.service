@@ -1,0 +1,16 @@
+[Unit]
+Description=Ticket Booking Django backend (Gunicorn)
+After=network.target
+
+[Service]
+User=debian
+Group=debian
+WorkingDirectory=/home/debian/code/ticket-booking/backend
+Environment="PATH=/home/debian/code/ticket-booking/backend/.venv/bin"
+EnvironmentFile=/home/debian/code/ticket-booking/backend/.env
+ExecStart=/home/debian/code/ticket-booking/backend/.venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 3 --timeout 60
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
