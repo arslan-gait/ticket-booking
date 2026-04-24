@@ -26,29 +26,81 @@ export default async function TicketPage({ params }: { params: Promise<Params> }
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">{t(lang, "yourTicket")}</h1>
       <div className="card p-4">
-        <p>
-          {t(lang, "name")}: <b>{booking.customer_name}</b>
-        </p>
-        <p>
-          {t(lang, "event")}: <b>{booking.event_name}</b>
-        </p>
-        <p>
-          {t(lang, "venue")}: <b>{booking.venue_name}</b>
-        </p>
-        {booking.venue_address_line ? (
-          <p>
-            {t(lang, "addressLine")}: <b>{booking.venue_address_line}</b>
-          </p>
-        ) : null}
-        <p>
-          {t(lang, "date")}: <b>{<LocalDateTime value={booking.event_date} />}</b>
-        </p>
+        <div className="mx-auto w-full max-w-sm">
+          {booking.event_image ? (
+            <img
+              src={booking.event_image}
+              alt={booking.event_name}
+              className="h-64 w-full rounded-xl object-contain"
+            />
+          ) : (
+            <div className="h-64 w-full rounded-xl bg-[var(--bg)]" />
+          )}
+          <p className="mt-3 text-center text-base font-semibold">{booking.event_name}</p>
+        </div>
       </div>
-      {booking.ticket?.qr_data ? (
-        <TicketQr value={booking.ticket.qr_data} />
-      ) : (
-        <p className="text-red-400">{t(lang, "qrMissing")}</p>
-      )}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="card space-y-2 p-4">
+          <p>
+            {t(lang, "name")}: <b>{booking.customer_name}</b>
+          </p>
+          <p>
+            {t(lang, "event")}: <b>{booking.event_name}</b>
+          </p>
+          <p>
+            {t(lang, "venue")}: <b>{booking.venue_name}</b>
+          </p>
+          {booking.venue_address_line ? (
+            <p>
+              {t(lang, "addressLine")}: <b>{booking.venue_address_line}</b>
+            </p>
+          ) : null}
+          <p>
+            {t(lang, "date")}: <b>{<LocalDateTime value={booking.event_date} />}</b>
+          </p>
+          <p>
+            {t(lang, "ticketScanStatus")}:{" "}
+            <span
+              className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                booking.ticket?.is_scanned ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
+              }`}
+            >
+              {booking.ticket?.is_scanned ? t(lang, "ticketScanned") : t(lang, "ticketNotScanned")}
+            </span>
+          </p>
+        </div>
+        <div className="card p-4">
+          <h2 className="mb-3 text-lg font-semibold">{t(lang, "yourSeats")}</h2>
+          {booking.items.length ? (
+            <div className="flex flex-wrap gap-2">
+              {booking.items.map((item) => {
+                const seat = item.seat_detail;
+                return (
+                  <span
+                    key={`${seat.section}-${seat.row_label}-${seat.seat_number}`}
+                    className="rounded-full border border-[var(--border)] bg-[var(--background)] px-3 py-1 text-sm"
+                  >
+                    {seat.section} {t(lang, "row")} {seat.row_label}, {t(lang, "seatPlace")} {seat.seat_number}
+                  </span>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="muted text-sm">{t(lang, "noSeatDetails")}</p>
+          )}
+        </div>
+      </div>
+      <div className="card p-4">
+        <h2 className="mb-2 text-lg font-semibold">QR</h2>
+        <p className="muted mb-4 text-sm">{t(lang, "ticketEntryHint")}</p>
+        {booking.ticket?.qr_data ? (
+          <div className="flex justify-center">
+            <TicketQr value={booking.ticket.qr_data} />
+          </div>
+        ) : (
+          <p className="text-red-400">{t(lang, "qrMissing")}</p>
+        )}
+      </div>
     </div>
   );
 }
