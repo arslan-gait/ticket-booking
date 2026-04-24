@@ -19,11 +19,15 @@ export default function TopbarMenu() {
   }
 
   return (
-    <nav className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3">
-      <Link href="/" className="mr-auto text-xl font-bold tracking-tight">
-        {tr("brand")}
+    <nav className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
+      <Link href="/">
+        <img
+          src="/static/logo.png"
+          alt={tr("brand")}
+          className="h-7 w-auto"
+        />
       </Link>
-      <div className="order-3 flex w-full items-center gap-2 overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--card)] p-1 sm:order-2 sm:w-auto sm:flex-1 sm:justify-center">
+      <div className="ml-auto flex items-center gap-2 overflow-x-auto">
         {navItems.map((item) => {
           const isActive = isActivePath(item.href);
           return (

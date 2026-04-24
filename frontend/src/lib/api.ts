@@ -51,6 +51,7 @@ export type EventItem = {
   id: number;
   name: string;
   description: string;
+  image: string | null;
   date: string;
   venue: number;
   venue_name: string;
@@ -129,11 +130,12 @@ export type BookingCreateInput = {
 };
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const isFormDataBody = typeof FormData !== "undefined" && init?.body instanceof FormData;
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
-      "Content-Type": "application/json",
       "Accept-Language": getApiLanguageHeader(),
+      ...(isFormDataBody ? {} : { "Content-Type": "application/json" }),
       ...(init?.headers ?? {}),
     },
     cache: "no-store",
@@ -181,10 +183,11 @@ export async function createEvent(input: {
   venue: number;
   price_tiers: Record<string, number>;
   is_active: boolean;
-}) {
+} | FormData) {
+  const body = input instanceof FormData ? input : JSON.stringify(input);
   return apiFetch<EventItem>("/events/", {
     method: "POST",
-    body: JSON.stringify(input),
+    body,
   });
 }
 
@@ -197,11 +200,12 @@ export async function updateEvent(
     venue: number;
     price_tiers: Record<string, number>;
     is_active: boolean;
-  }>,
+  }> | FormData,
 ) {
+  const body = input instanceof FormData ? input : JSON.stringify(input);
   return apiFetch<EventItem>(`/events/${id}/`, {
     method: "PATCH",
-    body: JSON.stringify(input),
+    body,
   });
 }
 

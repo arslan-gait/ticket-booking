@@ -79,6 +79,7 @@ function getCurrentTimezoneLabel(): string {
 const emptyForm = {
   name: "",
   description: "",
+  imageUrl: "",
   date: "",
   venue: "",
   typePrices: [] as TypePriceRow[],
@@ -148,6 +149,8 @@ export default function AdminEventsManager() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingEventId, setEditingEventId] = useState<number | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
   const venueSelectionRequestId = useRef(0);
   const currentTimezoneLabel = useMemo(() => getCurrentTimezoneLabel(), []);
 
@@ -263,14 +266,18 @@ export default function AdminEventsManager() {
     setLoading(true);
     setError("");
     try {
-      const payload = {
-        name: form.name,
-        description: form.description,
-        date: toUtcIsoStringFromLocalInput(form.date),
-        venue: Number(form.venue),
-        price_tiers: priceTiers,
-        is_active: form.isActive,
-      };
+      const payload = new FormData();
+      payload.append("name", form.name);
+      payload.append("description", form.description);
+      payload.append("date", toUtcIsoStringFromLocalInput(form.date));
+      payload.append("venue", String(Number(form.venue)));
+      payload.append("price_tiers", JSON.stringify(priceTiers));
+      payload.append("is_active", String(form.isActive));
+      if (imageFile) {
+        payload.append("image", imageFile);
+      } else if (removeImage) {
+        payload.append("image", "");
+      }
 
       if (editingEventId === null) {
         await createEvent(payload);
@@ -278,6 +285,8 @@ export default function AdminEventsManager() {
         await updateEvent(editingEventId, payload);
       }
       setForm(emptyForm);
+      setImageFile(null);
+      setRemoveImage(false);
       setEditingEventId(null);
       setVenueSeats([]);
       setVenueTypeCounts({});
@@ -362,6 +371,8 @@ export default function AdminEventsManager() {
   function cancelEditing() {
     setEditingEventId(null);
     setForm(emptyForm);
+    setImageFile(null);
+    setRemoveImage(false);
     setVenueSeats([]);
     setVenueTypeCounts({});
     setVenueTypeSections({});
@@ -411,12 +422,15 @@ export default function AdminEventsManager() {
       setForm({
         name: event.name,
         description: event.description || "",
+        imageUrl: event.image || "",
         date: toDateTimeLocalValue(event.date),
         venue: String(event.venue),
         typePrices: sortedTypePrices,
         rowPrices,
         isActive: event.is_active,
       });
+      setImageFile(null);
+      setRemoveImage(false);
       setEditingEventId(event.id);
     } catch (e) {
       if (requestId !== venueSelectionRequestId.current) return;
@@ -453,6 +467,36 @@ export default function AdminEventsManager() {
           value={form.description}
           onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
         />
+        <div className="space-y-2">
+          <label className="text-sm font-medium">{tr("eventImage")}</label>
+          <input
+            type="file"
+            accept="image/*"
+            className="input-field"
+            onChange={(e) => {
+              const file = e.target.files?.[0] ?? null;
+              setImageFile(file);
+              if (file) setRemoveImage(false);
+            }}
+          />
+          {form.imageUrl && !removeImage && !imageFile ? (
+            <img src={form.imageUrl} alt={form.name || "Event image"} className="h-28 rounded-lg object-cover" />
+          ) : null}
+          {(form.imageUrl || imageFile) && (
+            <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
+              <input
+                type="checkbox"
+                checked={removeImage}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setRemoveImage(checked);
+                  if (checked) setImageFile(null);
+                }}
+              />
+              {tr("removeImage")}
+            </label>
+          )}
+        </div>
         <input
           type="datetime-local"
           className="input-field"
