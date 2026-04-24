@@ -32,11 +32,15 @@ class VenueWriteSerializer(serializers.ModelSerializer):
         model = Venue
         fields = ['id', 'name', 'description', 'layout_meta', 'seats']
 
+    @staticmethod
+    def _create_seats(venue, seats_data):
+        for seat_data in seats_data:
+            Seat.objects.create(venue=venue, **seat_data)
+
     def create(self, validated_data):
         seats_data = validated_data.pop('seats', [])
         venue = Venue.objects.create(**validated_data)
-        for seat_data in seats_data:
-            Seat.objects.create(venue=venue, **seat_data)
+        self._create_seats(venue, seats_data)
         return venue
 
     def update(self, instance, validated_data):
@@ -48,8 +52,7 @@ class VenueWriteSerializer(serializers.ModelSerializer):
 
         if seats_data is not None:
             instance.seats.all().delete()
-            for seat_data in seats_data:
-                Seat.objects.create(venue=instance, **seat_data)
+            self._create_seats(instance, seats_data)
 
         return instance
 

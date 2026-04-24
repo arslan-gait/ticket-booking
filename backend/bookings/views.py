@@ -1,13 +1,44 @@
-from decimal import Decimal
-
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 
+from common.viewset_mixins import ActionSerializerMixin
 from events.models import Event, Seat
 
+from .domain.constants import (
+    BOOKING_KEY,
+    CONSUMED_KEY,
+    CUSTOMER_NAME_KEY,
+    ERROR_KEY,
+    EVENT_DATE_KEY,
+    EVENT_ID_KEY,
+    EVENT_KEY,
+    EVENT_NOT_FOUND_MESSAGE,
+    ID_KEY,
+    INVALID_QR_MESSAGE,
+    LAYOUT_META_KEY,
+    NAME_KEY,
+    NUMBER_KEY,
+    PHONE_NUMBER_KEY,
+    PRICE_TIERS_KEY,
+    ROW_KEY,
+    SCANNED_AT_KEY,
+    SEATS_KEY,
+    SECTION_KEY,
+    TOTAL_PRICE_KEY,
+    TICKET_NOT_FOUND_MESSAGE,
+    TICKET_ID_KEY,
+    TICKET_SCANNED_ELSEWHERE_MESSAGE,
+    TYPE_KEY,
+    VALID_KEY,
+    VENUE_KEY,
+    BookingStatus,
+    SeatAvailabilityStatus,
+)
+from .domain.booking_creation import BookingCreationFailure, create_booking as create_booking_record
+from .domain.ticket_validation import validate_ticket_state
 from .models import Booking, BookingItem, Ticket
 from .serializers import (
     BookingDetailSerializer,
@@ -17,48 +48,23 @@ from .serializers import (
     VerifyTicketSerializer,
 )
 
-ROW_PRICE_PREFIX = 'row:'
+def api_error(message, status_code=None, **extra):
+    payload = {ERROR_KEY: message}
+    payload.update(extra)
+    return Response(payload, status=status_code)
 
 
-def build_row_price_key(section: str, row_label: str) -> str:
-    return f'{section.strip()}::{row_label.strip()}'
-
-
-def split_price_tiers(price_tiers):
-    seat_type_prices = {}
-    row_prices = {}
-    for raw_key, raw_price in price_tiers.items():
-        key = str(raw_key).strip()
-        price = Decimal(str(raw_price))
-        if key.startswith(ROW_PRICE_PREFIX):
-            row_key = key[len(ROW_PRICE_PREFIX):].strip()
-            if row_key:
-                row_prices[row_key] = price
-            continue
-        if key:
-            seat_type_prices[key] = price
-    return seat_type_prices, row_prices
-
-
-def resolve_seat_price(seat, seat_type_prices, row_prices):
-    row_key = build_row_price_key(seat.section or '', seat.row_label or '')
-    if row_key in row_prices:
-        return row_prices[row_key]
-    return seat_type_prices.get((seat.seat_type or '').strip())
-
-
-class BookingViewSet(viewsets.ReadOnlyModelViewSet):
+class BookingViewSet(ActionSerializerMixin, viewsets.ReadOnlyModelViewSet):
     queryset = (
         Booking.objects
         .select_related('event', 'event__venue', 'ticket')
         .prefetch_related('items', 'items__seat')
         .all()
     )
-
-    def get_serializer_class(self):
-        if self.action == 'list':
-            return BookingListSerializer
-        return BookingDetailSerializer
+    default_serializer_class = BookingDetailSerializer
+    serializer_action_classes = {
+        'list': BookingListSerializer,
+    }
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -80,9 +86,9 @@ class BookingViewSet(viewsets.ReadOnlyModelViewSet):
         with transaction.atomic():
             booking.status = new_status
             booking.save(update_fields=['status', 'updated_at'])
-            if new_status == 'cancelled':
+            if new_status == BookingStatus.CANCELLED:
                 booking.items.update(is_active=False)
-            elif new_status == 'paid':
+            elif new_status == BookingStatus.PAID:
                 booking.items.update(is_active=True)
 
         return Response(BookingDetailSerializer(booking).data)
@@ -92,103 +98,14 @@ class BookingViewSet(viewsets.ReadOnlyModelViewSet):
 def create_booking(request):
     serializer = CreateBookingSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
-
     try:
-        event = Event.objects.select_related('venue').get(
-            id=data['event_id'], is_active=True,
+        booking = create_booking_record(serializer.validated_data)
+    except BookingCreationFailure as error:
+        return api_error(
+            error.message,
+            error.status_code,
+            **error.extra,
         )
-    except Event.DoesNotExist:
-        return Response(
-            {'error': 'Событие не найдено или не активно.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    seat_ids = data['seat_ids']
-    seats = list(
-        Seat.objects.filter(id__in=seat_ids, venue=event.venue)
-    )
-    if len(seats) != len(seat_ids):
-        return Response(
-            {'error': 'Одно или несколько мест недоступны для этой площадки.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    try:
-        seat_type_prices, row_prices = split_price_tiers(event.price_tiers)
-    except Exception:
-        return Response(
-            {'error': 'В тарифах события указаны некорректные значения.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    missing_price_types = sorted(
-        {
-            (seat.seat_type or '').strip()
-            for seat in seats
-            if resolve_seat_price(seat, seat_type_prices, row_prices) is None
-        }
-    )
-    if missing_price_types:
-        return Response(
-            {
-                'error': 'Для этого события не хватает цен по типам мест.',
-                'missing_seat_types': missing_price_types,
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    with transaction.atomic():
-        taken_seats = (
-            BookingItem.objects
-            .filter(
-                seat_id__in=seat_ids,
-                event=event,
-                is_active=True,
-            )
-            .select_for_update()
-            .values_list('seat_id', flat=True)
-        )
-        taken_set = set(taken_seats)
-        if taken_set:
-            return Response(
-                {
-                    'error': 'Некоторые места уже забронированы.',
-                    'taken_seat_ids': list(taken_set),
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
-
-        total = Decimal('0')
-        for seat in seats:
-            price = resolve_seat_price(seat, seat_type_prices, row_prices)
-            total += price
-
-        booking = Booking.objects.create(
-            event=event,
-            customer_name=data['customer_name'],
-            phone_number=data['phone_number'],
-            status='pending',
-            total_price=total,
-        )
-
-        items = []
-        for seat in seats:
-            price = resolve_seat_price(seat, seat_type_prices, row_prices)
-            items.append(
-                BookingItem(
-                    booking=booking,
-                    event=event,
-                    seat=seat,
-                    price=price,
-                    is_active=True,
-                )
-            )
-        BookingItem.objects.bulk_create(items)
-
-        ticket = Ticket.objects.create(booking=booking)
-        ticket.generate_qr_data()
-        ticket.save(update_fields=['qr_data'])
 
     booking.refresh_from_db()
     return Response(
@@ -202,9 +119,9 @@ def event_seat_availability(request, event_id):
     try:
         event = Event.objects.select_related('venue').get(id=event_id)
     except Event.DoesNotExist:
-        return Response(
-            {'error': 'Событие не найдено.'},
-            status=status.HTTP_404_NOT_FOUND,
+        return api_error(
+            EVENT_NOT_FOUND_MESSAGE,
+            status.HTTP_404_NOT_FOUND,
         )
 
     seats = Seat.objects.filter(venue=event.venue).values(
@@ -223,25 +140,25 @@ def event_seat_availability(request, event_id):
     for item in booked_items:
         seat_id = item['seat_id']
         booking_status = item['booking__status']
-        if booking_status == 'paid':
-            seat_status_map[seat_id] = 'paid'
+        if booking_status == BookingStatus.PAID:
+            seat_status_map[seat_id] = SeatAvailabilityStatus.PAID
         elif seat_id not in seat_status_map:
-            seat_status_map[seat_id] = 'booked'
+            seat_status_map[seat_id] = SeatAvailabilityStatus.BOOKED
 
     result = []
     for seat in seats:
-        seat['status'] = seat_status_map.get(seat['id'], 'open')
+        seat['status'] = seat_status_map.get(seat['id'], SeatAvailabilityStatus.OPEN)
         result.append(seat)
 
     return Response({
-        'event_id': event.id,
-        'venue': {
-            'id': event.venue.id,
-            'name': event.venue.name,
-            'layout_meta': event.venue.layout_meta,
+        EVENT_ID_KEY: event.id,
+        VENUE_KEY: {
+            ID_KEY: event.venue.id,
+            NAME_KEY: event.venue.name,
+            LAYOUT_META_KEY: event.venue.layout_meta,
         },
-        'price_tiers': event.price_tiers,
-        'seats': result,
+        PRICE_TIERS_KEY: event.price_tiers,
+        SEATS_KEY: result,
     })
 
 
@@ -254,7 +171,7 @@ def verify_ticket(request):
     payload = Ticket.verify_qr_data(serializer.validated_data['qr_data'])
     if payload is None:
         return Response(
-            {'valid': False, 'error': 'QR-код недействителен или поврежден.'},
+            {VALID_KEY: False, ERROR_KEY: INVALID_QR_MESSAGE},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -263,40 +180,33 @@ def verify_ticket(request):
             Ticket.objects
             .select_related('booking', 'booking__event', 'booking__event__venue')
             .prefetch_related('booking__items', 'booking__items__seat')
-            .get(token=payload['ticket_id'])
+            .get(token=payload[TICKET_ID_KEY])
         )
     except Ticket.DoesNotExist:
         return Response(
-            {'valid': False, 'error': 'Билет не найден.'},
+            {VALID_KEY: False, ERROR_KEY: TICKET_NOT_FOUND_MESSAGE},
             status=status.HTTP_404_NOT_FOUND,
         )
 
     booking = ticket.booking
 
-    if booking.status == 'cancelled':
+    state_error = validate_ticket_state(
+        booking_status=booking.status,
+        is_scanned=ticket.is_scanned,
+        scanned_at=ticket.scanned_at,
+    )
+    if state_error is not None:
         return Response({
-            'valid': False,
-            'error': 'Эта бронь отменена.',
-        })
-
-    if booking.status != 'paid':
-        return Response({
-            'valid': False,
-            'error': 'Эта бронь еще не оплачена.',
-        })
-
-    if ticket.is_scanned:
-        return Response({
-            'valid': False,
-            'error': f'Билет уже погашен: {ticket.scanned_at.isoformat()}.',
+            VALID_KEY: False,
+            ERROR_KEY: state_error.message,
         })
 
     seats = [
         {
-            'section': item.seat.section,
-            'row': item.seat.row_label,
-            'number': item.seat.seat_number,
-            'type': item.seat.seat_type,
+            SECTION_KEY: item.seat.section,
+            ROW_KEY: item.seat.row_label,
+            NUMBER_KEY: item.seat.seat_number,
+            TYPE_KEY: item.seat.seat_type,
         }
         for item in booking.items.all()
     ]
@@ -309,23 +219,23 @@ def verify_ticket(request):
             )
             if rows_updated == 0:
                 return Response({
-                    'valid': False,
-                    'error': 'Билет только что был погашен на другом устройстве.',
+                    VALID_KEY: False,
+                    ERROR_KEY: TICKET_SCANNED_ELSEWHERE_MESSAGE,
                 })
         ticket.refresh_from_db()
 
     return Response({
-        'valid': True,
-        'consumed': consume,
-        'booking': {
-            'id': booking.id,
-            'customer_name': booking.customer_name,
-            'phone_number': booking.phone_number,
-            'event': booking.event.name,
-            'event_date': booking.event.date.isoformat(),
-            'venue': booking.event.venue.name,
-            'seats': seats,
-            'total_price': str(booking.total_price),
+        VALID_KEY: True,
+        CONSUMED_KEY: consume,
+        BOOKING_KEY: {
+            ID_KEY: booking.id,
+            CUSTOMER_NAME_KEY: booking.customer_name,
+            PHONE_NUMBER_KEY: booking.phone_number,
+            EVENT_KEY: booking.event.name,
+            EVENT_DATE_KEY: booking.event.date.isoformat(),
+            VENUE_KEY: booking.event.venue.name,
+            SEATS_KEY: seats,
+            TOTAL_PRICE_KEY: str(booking.total_price),
         },
-        'scanned_at': ticket.scanned_at.isoformat() if ticket.scanned_at else None,
+        SCANNED_AT_KEY: ticket.scanned_at.isoformat() if ticket.scanned_at else None,
     })

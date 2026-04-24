@@ -39,6 +39,25 @@ function buildRowPriceKey(section: string, rowLabel: string): string {
   return `${ROW_PRICE_PREFIX}${section.trim()}::${rowLabel.trim()}`;
 }
 
+function parseRowPriceKey(key: string): { section: string; rowLabel: string } | null {
+  if (!key.startsWith(ROW_PRICE_PREFIX)) return null;
+  const raw = key.slice(ROW_PRICE_PREFIX.length);
+  const [section, rowLabel] = raw.split("::");
+  if (typeof rowLabel !== "string") return null;
+  return {
+    section: (section ?? "").trim(),
+    rowLabel: rowLabel.trim(),
+  };
+}
+
+function toDateTimeLocalValue(value: string): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 16);
+}
+
 const emptyForm = {
   name: "",
   description: "",
@@ -110,6 +129,7 @@ export default function AdminEventsManager() {
   const [venueTypeSections, setVenueTypeSections] = useState<Record<string, string[]>>({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<number | null>(null);
   const venueSelectionRequestId = useRef(0);
 
   const totalPlaces = useMemo(
@@ -224,15 +244,25 @@ export default function AdminEventsManager() {
     setLoading(true);
     setError("");
     try {
-      await createEvent({
+      const payload = {
         name: form.name,
         description: form.description,
         date: form.date,
         venue: Number(form.venue),
         price_tiers: priceTiers,
         is_active: form.isActive,
-      });
+      };
+
+      if (editingEventId === null) {
+        await createEvent(payload);
+      } else {
+        await updateEvent(editingEventId, payload);
+      }
       setForm(emptyForm);
+      setEditingEventId(null);
+      setVenueSeats([]);
+      setVenueTypeCounts({});
+      setVenueTypeSections({});
       await load();
     } catch (e) {
       setError(toErrorMessage(e));
@@ -310,10 +340,88 @@ export default function AdminEventsManager() {
     }
   }
 
+  function cancelEditing() {
+    setEditingEventId(null);
+    setForm(emptyForm);
+    setVenueSeats([]);
+    setVenueTypeCounts({});
+    setVenueTypeSections({});
+    setError("");
+  }
+
+  async function startEditing(event: EventItem) {
+    const requestId = ++venueSelectionRequestId.current;
+    setLoading(true);
+    setError("");
+    try {
+      const venue = await getVenue(event.venue);
+      if (requestId !== venueSelectionRequestId.current) return;
+      const { counts, sectionsByType, rows } = buildVenuePricingData(venue.seats);
+      const typePrices: TypePriceRow[] = [];
+      const rowPrices: RowPriceRow[] = rows.map((row) => ({
+        ...row,
+        price: "",
+      }));
+
+      for (const [key, value] of Object.entries(event.price_tiers ?? {})) {
+        const rowKey = parseRowPriceKey(key);
+        if (rowKey) {
+          const existingRow = rowPrices.find(
+            (row) => row.section === rowKey.section && row.rowLabel === rowKey.rowLabel,
+          );
+          if (existingRow) {
+            existingRow.price = String(value);
+          } else {
+            rowPrices.push({
+              section: rowKey.section,
+              rowLabel: rowKey.rowLabel,
+              seatType: "",
+              seatsCount: 0,
+              price: String(value),
+            });
+          }
+          continue;
+        }
+        typePrices.push({ seatType: key, price: String(value) });
+      }
+
+      const sortedTypePrices = typePrices.sort((a, b) => a.seatType.localeCompare(b.seatType));
+      setVenueSeats(venue.seats);
+      setVenueTypeCounts(counts);
+      setVenueTypeSections(sectionsByType);
+      setForm({
+        name: event.name,
+        description: event.description || "",
+        date: toDateTimeLocalValue(event.date),
+        venue: String(event.venue),
+        typePrices: sortedTypePrices,
+        rowPrices,
+        isActive: event.is_active,
+      });
+      setEditingEventId(event.id);
+    } catch (e) {
+      if (requestId !== venueSelectionRequestId.current) return;
+      setError(toErrorMessage(e));
+    } finally {
+      if (requestId === venueSelectionRequestId.current) {
+        setLoading(false);
+      }
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="card space-y-3 p-4">
-        <h2 className="text-lg font-semibold">{tr("createEvent")}</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">
+            {editingEventId === null ? tr("createEvent") : tr("editEvent")}
+          </h2>
+          {editingEventId !== null ? (
+            <span className="rounded-full border border-[var(--border)] bg-[var(--bg-elev)] px-3 py-1 text-xs font-medium text-[var(--muted)]">
+              {tr("editingEventBadge")}
+            </span>
+          ) : null}
+        </div>
         <input
           className="input-field"
           placeholder={tr("eventName")}
@@ -436,9 +544,16 @@ export default function AdminEventsManager() {
           />
           {tr("activeEvent")}
         </label>
-        <button className="button button-primary" onClick={submit} disabled={loading}>
-          {loading ? tr("saving") : tr("createEventBtn")}
-        </button>
+        <div className="flex items-center justify-end gap-2">
+          {editingEventId !== null ? (
+            <button className="button button-secondary" onClick={cancelEditing} disabled={loading}>
+              {tr("cancelEditing")}
+            </button>
+          ) : null}
+          <button className="button button-primary" onClick={submit} disabled={loading}>
+            {loading ? tr("saving") : editingEventId === null ? tr("createEventBtn") : tr("saveEventChanges")}
+          </button>
+        </div>
       </div>
 
       <div className="card p-4">
@@ -481,9 +596,14 @@ export default function AdminEventsManager() {
                 </div>
 
                 <div className="mt-4 flex justify-end">
-                  <button className="button button-secondary" onClick={() => toggleActive(event)}>
-                    {event.is_active ? tr("markInactive") : tr("markActive")}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button className="button button-secondary" onClick={() => startEditing(event)} disabled={loading}>
+                      {tr("edit")}
+                    </button>
+                    <button className="button button-secondary" onClick={() => toggleActive(event)}>
+                      {event.is_active ? tr("markInactive") : tr("markActive")}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

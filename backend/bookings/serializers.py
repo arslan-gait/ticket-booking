@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from events.serializers import SeatSerializer
 
+from .domain.constants import BookingStatus
 from .models import Booking, BookingItem, Ticket
 
 
@@ -62,4 +63,6 @@ class VerifyTicketSerializer(serializers.Serializer):
 
 
 class UpdateBookingStatusSerializer(serializers.Serializer):
-    status = serializers.ChoiceField(choices=['paid', 'cancelled'])
+    status = serializers.ChoiceField(
+        choices=[BookingStatus.PAID, BookingStatus.CANCELLED],
+    )

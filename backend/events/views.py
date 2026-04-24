@@ -1,5 +1,7 @@
 from rest_framework import viewsets
 
+from common.viewset_mixins import ActionSerializerMixin
+
 from .models import Event, Venue
 from .serializers import (
     EventDetailSerializer,
@@ -11,26 +13,26 @@ from .serializers import (
 )
 
 
-class VenueViewSet(viewsets.ModelViewSet):
+class VenueViewSet(ActionSerializerMixin, viewsets.ModelViewSet):
     queryset = Venue.objects.prefetch_related('seats').all()
+    default_serializer_class = VenueDetailSerializer
+    serializer_action_classes = {
+        'list': VenueListSerializer,
+        'create': VenueWriteSerializer,
+        'update': VenueWriteSerializer,
+        'partial_update': VenueWriteSerializer,
+    }
 
-    def get_serializer_class(self):
-        if self.action == 'list':
-            return VenueListSerializer
-        if self.action in ('create', 'update', 'partial_update'):
-            return VenueWriteSerializer
-        return VenueDetailSerializer
 
-
-class EventViewSet(viewsets.ModelViewSet):
+class EventViewSet(ActionSerializerMixin, viewsets.ModelViewSet):
     queryset = Event.objects.select_related('venue').all()
-
-    def get_serializer_class(self):
-        if self.action == 'list':
-            return EventListSerializer
-        if self.action in ('create', 'update', 'partial_update'):
-            return EventWriteSerializer
-        return EventDetailSerializer
+    default_serializer_class = EventDetailSerializer
+    serializer_action_classes = {
+        'list': EventListSerializer,
+        'create': EventWriteSerializer,
+        'update': EventWriteSerializer,
+        'partial_update': EventWriteSerializer,
+    }
 
     def get_queryset(self):
         qs = super().get_queryset()

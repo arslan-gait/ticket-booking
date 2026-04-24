@@ -79,6 +79,11 @@ export const dictionary = {
     cameraPermissionDenied:
       "Доступ к камере запрещен. Разрешите доступ в настройках браузера для этого сайта и перезагрузите страницу.",
     createEvent: "Создать событие",
+    editEvent: "Редактировать событие",
+    edit: "Редактировать",
+    saveEventChanges: "Сохранить изменения",
+    cancelEditing: "Отменить редактирование",
+    editingEventBadge: "Режим редактирования",
     eventName: "Название события",
     description: "Описание",
     selectVenue: "Выберите площадку",
@@ -197,6 +202,11 @@ export const dictionary = {
     cameraPermissionDenied:
       "Camera access was denied. Please allow camera permission for this site in browser settings and reload the page.",
     createEvent: "Create event",
+    editEvent: "Edit event",
+    edit: "Edit",
+    saveEventChanges: "Save changes",
+    cancelEditing: "Cancel editing",
+    editingEventBadge: "Editing mode",
     eventName: "Event name",
     description: "Description",
     selectVenue: "Select venue",
