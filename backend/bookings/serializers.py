@@ -46,11 +46,19 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     venue_address_line = serializers.CharField(source='event.venue.address_line', read_only=True)
     public_token = serializers.UUIDField(source='ticket.token', read_only=True)
 
-    @staticmethod
-    def get_event_image(obj):
+    def get_event_image(self, obj):
         if not obj.event.image:
             return None
-        return f"{settings.BACKEND_BASE_URL}{obj.event.image.url}"
+        image_url = obj.event.image.url
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(image_url)
+
+        backend_base_url = settings.BACKEND_BASE_URL
+        if backend_base_url:
+            return f"{backend_base_url}/{image_url.lstrip('/')}"
+
+        return image_url if image_url.startswith("/") else f"/{image_url}"
 
     class Meta:
         model = Booking

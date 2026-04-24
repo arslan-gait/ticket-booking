@@ -187,7 +187,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
-BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "http://127.0.0.1:8008").rstrip("/")
+BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "").rstrip("/")
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

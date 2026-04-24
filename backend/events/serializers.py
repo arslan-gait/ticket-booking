@@ -63,11 +63,19 @@ class EventListSerializer(serializers.ModelSerializer):
     venue_name = serializers.CharField(source='venue.name', read_only=True)
     image = serializers.SerializerMethodField()
 
-    @staticmethod
-    def get_image(obj):
+    def get_image(self, obj):
         if not obj.image:
             return None
-        return f"{settings.BACKEND_BASE_URL}{obj.image.url}"
+        image_url = obj.image.url
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(image_url)
+
+        backend_base_url = settings.BACKEND_BASE_URL
+        if backend_base_url:
+            return f"{backend_base_url}/{image_url.lstrip('/')}"
+
+        return image_url if image_url.startswith("/") else f"/{image_url}"
 
     class Meta:
         model = Event
@@ -78,11 +86,19 @@ class EventDetailSerializer(serializers.ModelSerializer):
     venue = VenueDetailSerializer(read_only=True)
     image = serializers.SerializerMethodField()
 
-    @staticmethod
-    def get_image(obj):
+    def get_image(self, obj):
         if not obj.image:
             return None
-        return f"{settings.BACKEND_BASE_URL}{obj.image.url}"
+        image_url = obj.image.url
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(image_url)
+
+        backend_base_url = settings.BACKEND_BASE_URL
+        if backend_base_url:
+            return f"{backend_base_url}/{image_url.lstrip('/')}"
+
+        return image_url if image_url.startswith("/") else f"/{image_url}"
 
     class Meta:
         model = Event
