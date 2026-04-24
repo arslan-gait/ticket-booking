@@ -13,31 +13,40 @@ export default async function EventPage({ params }: { params: Promise<Params> })
   const [event, seatData] = await Promise.all([getEvent(eventId), getEventSeats(eventId)]);
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">{event.name}</h1>
-      <div className="card p-4">
-        <div className="mx-auto w-full max-w-sm">
-          {event.image ? (
-            <img
-              src={event.image}
-              alt={event.name}
-              className="h-64 w-full rounded-xl object-contain"
-            />
-          ) : (
-            <div className="h-64 w-full rounded-xl bg-[var(--bg)]" />
-          )}
-          <p className="mt-3 text-center text-base font-semibold">{event.name}</p>
+    <div className="space-y-6">
+      <section className="card p-4 md:p-6">
+        <div className="grid items-start gap-4 md:grid-cols-[280px_1fr]">
+          <div className="w-full">
+            {event.image ? (
+              <img
+                src={event.image}
+                alt={event.name}
+                className="h-full w-auto max-w-full rounded-2xl object-contain transition duration-300 group-hover:scale-[1.02]"
+              />
+            ) : (
+              <div className="h-64 w-full rounded-[2.25rem] bg-[var(--background)]" />
+            )}
+          </div>
+          <div className="space-y-3">
+            <h1 className="text-2xl font-bold md:text-3xl">{event.name}</h1>
+            <p className="muted text-sm">
+              <LocalDateTime value={event.date} />
+            </p>
+            {event.description ? <p className="muted">{event.description}</p> : null}
+            <div className="flex flex-wrap gap-2 text-sm">
+              <span className="rounded-full border border-[var(--border)] bg-[var(--background)] px-3 py-1">
+                {t(lang, "venueLabel")}: {seatData.venue.name}
+              </span>
+              {seatData.venue.address_line ? (
+                <span className="rounded-full border border-[var(--border)] bg-[var(--background)] px-3 py-1">
+                  {t(lang, "addressLine")}: {seatData.venue.address_line}
+                </span>
+              ) : null}
+            </div>
+          </div>
         </div>
-      </div>
-      <p className="muted">{<LocalDateTime value={event.date} />}</p>
-      <p className="muted">
-        {t(lang, "venueLabel")}: {seatData.venue.name}
-      </p>
-      {seatData.venue.address_line ? (
-        <p className="muted">
-          {t(lang, "addressLine")}: {seatData.venue.address_line}
-        </p>
-      ) : null}
+      </section>
+
       <EventBookingPanel
         eventId={eventId}
         seats={seatData.seats}
