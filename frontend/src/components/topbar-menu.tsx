@@ -22,7 +22,7 @@ export default function TopbarMenu() {
     <nav className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
       <Link href="/">
         <img
-          src="/static/logo.png"
+          src="/logo.png"
           alt={tr("brand")}
           className="h-7 w-auto"
         />
