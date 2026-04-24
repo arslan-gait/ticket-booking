@@ -14,7 +14,7 @@ export default async function BookingPage({ params }: { params: Promise<Params> 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">
-        {t(lang, "booking")} #{booking.id}
+        {t(lang, "bookingSuccess")}
       </h1>
       <div className="card space-y-2 p-4">
         <p>
