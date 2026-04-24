@@ -5,8 +5,13 @@ import { getServerLanguage, getServerTheme } from "@/lib/i18n-server";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Ticket Booking",
-  description: "Event ticket booking app",
+  title: "Sennet Yurti",
+  description: "",
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
+    shortcut: "/favicon.ico",
+  },
   formatDetection: {
     telephone: false,
     date: false,
