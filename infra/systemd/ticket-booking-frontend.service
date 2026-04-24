@@ -8,7 +8,8 @@ Group=debian
 WorkingDirectory=/home/debian/code/ticket-booking/frontend
 Environment=NODE_ENV=production
 EnvironmentFile=/home/debian/code/ticket-booking/frontend/.env
-ExecStart=/usr/bin/env npm run start -- -p 3000
+Environment=PATH=/home/debian/.nvm/versions/node/v22.22.2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+ExecStart=/home/debian/.nvm/versions/node/v22.22.2/bin/npm run start -- -p 3000
 Restart=always
 RestartSec=3
 
