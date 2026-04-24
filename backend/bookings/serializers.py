@@ -25,12 +25,13 @@ class BookingListSerializer(serializers.ModelSerializer):
     event_name = serializers.CharField(source='event.name', read_only=True)
     event_date = serializers.DateTimeField(source='event.date', read_only=True)
     seat_count = serializers.IntegerField(source='items.count', read_only=True)
+    public_token = serializers.UUIDField(source='ticket.token', read_only=True)
 
     class Meta:
         model = Booking
         fields = [
             'id', 'event', 'event_name', 'event_date', 'customer_name',
-            'phone_number', 'status', 'total_price', 'seat_count', 'created_at',
+            'phone_number', 'status', 'total_price', 'seat_count', 'public_token', 'created_at',
         ]
 
 
@@ -40,13 +41,14 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     event_name = serializers.CharField(source='event.name', read_only=True)
     event_date = serializers.DateTimeField(source='event.date', read_only=True)
     venue_name = serializers.CharField(source='event.venue.name', read_only=True)
+    public_token = serializers.UUIDField(source='ticket.token', read_only=True)
 
     class Meta:
         model = Booking
         fields = [
             'id', 'event', 'event_name', 'event_date', 'venue_name',
             'customer_name', 'phone_number', 'status', 'total_price',
-            'items', 'ticket', 'created_at',
+            'items', 'ticket', 'public_token', 'created_at',
         ]
 
 

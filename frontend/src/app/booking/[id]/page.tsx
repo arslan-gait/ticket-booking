@@ -9,7 +9,7 @@ type Params = { id: string };
 export default async function BookingPage({ params }: { params: Promise<Params> }) {
   const lang = await getServerLanguage();
   const { id } = await params;
-  const booking = await getBooking(Number(id));
+  const booking = await getBooking(id);
 
   return (
     <div className="space-y-4">
@@ -44,7 +44,7 @@ export default async function BookingPage({ params }: { params: Promise<Params> 
         <h2 className="text-lg font-semibold">{t(lang, "yourTicket")}</h2>
         {booking.ticket?.qr_data ? <TicketQr value={booking.ticket.qr_data} /> : <p className="text-red-400">{t(lang, "qrMissing")}</p>}
       </div>
-      <Link className="button button-primary inline-block" href={`/ticket/${booking.id}`}>
+      <Link className="button button-primary inline-block" href={`/ticket/${booking.public_token}`}>
         {t(lang, "openTicketPage")}
       </Link>
     </div>

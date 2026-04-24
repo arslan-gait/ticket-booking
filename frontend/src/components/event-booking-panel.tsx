@@ -63,7 +63,7 @@ export default function EventBookingPanel({ eventId, seats, priceTiers, layoutMe
         phone_number: phone.trim(),
         seat_ids: selectedSeatIds,
       });
-      router.push(`/booking/${booking.id}`);
+      router.push(`/booking/${booking.public_token}`);
     } catch (err) {
       setError(toErrorMessage(err));
     } finally {

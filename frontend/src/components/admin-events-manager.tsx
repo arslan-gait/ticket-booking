@@ -58,6 +58,16 @@ function toDateTimeLocalValue(value: string): string {
   return localDate.toISOString().slice(0, 16);
 }
 
+function getCurrentTimezoneLabel(): string {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const offsetMinutes = -new Date().getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? "+" : "-";
+  const absOffsetMinutes = Math.abs(offsetMinutes);
+  const offsetHours = String(Math.floor(absOffsetMinutes / 60)).padStart(2, "0");
+  const offsetRemainderMinutes = String(absOffsetMinutes % 60).padStart(2, "0");
+  return `${timeZone} (UTC${sign}${offsetHours}:${offsetRemainderMinutes})`;
+}
+
 const emptyForm = {
   name: "",
   description: "",
@@ -131,6 +141,7 @@ export default function AdminEventsManager() {
   const [loading, setLoading] = useState(false);
   const [editingEventId, setEditingEventId] = useState<number | null>(null);
   const venueSelectionRequestId = useRef(0);
+  const currentTimezoneLabel = useMemo(() => getCurrentTimezoneLabel(), []);
 
   const totalPlaces = useMemo(
     () => Object.values(venueTypeCounts).reduce((sum, count) => sum + count, 0),
@@ -440,6 +451,7 @@ export default function AdminEventsManager() {
           value={form.date}
           onChange={(e) => setForm((s) => ({ ...s, date: e.target.value }))}
         />
+        <p className="text-xs text-[var(--muted)]">{tr("currentTimezone", { timezone: currentTimezoneLabel })}</p>
         <select
           className="input-field"
           value={form.venue}

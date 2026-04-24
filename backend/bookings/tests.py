@@ -245,6 +245,22 @@ class BookingApiTests(APITestCase):
         self.assertTrue(ticket.is_scanned)
         self.assertIsNotNone(ticket.scanned_at)
 
+    def test_public_booking_detail_uses_ticket_token(self):
+        response = self.client.post(
+            reverse('create-booking'),
+            self._create_booking_payload([self.seat_vip.id]),
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        public_token = response.data['public_token']
+        public_response = self.client.get(
+            reverse('public-booking-detail', kwargs={'token': public_token}),
+        )
+
+        self.assertEqual(public_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(public_response.data['public_token'], public_token)
+
 
 class ArchitectureGuardTests(APITestCase):
     def test_runtime_booking_code_has_no_status_magic_literals(self):

@@ -2,6 +2,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view
+from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
 from common.viewset_mixins import ActionSerializerMixin
@@ -112,6 +113,17 @@ def create_booking(request):
         BookingDetailSerializer(booking).data,
         status=status.HTTP_201_CREATED,
     )
+
+
+@api_view(['GET'])
+def public_booking_detail(request, token):
+    booking = get_object_or_404(
+        Booking.objects
+        .select_related('event', 'event__venue', 'ticket')
+        .prefetch_related('items', 'items__seat'),
+        ticket__token=token,
+    )
+    return Response(BookingDetailSerializer(booking).data)
 
 
 @api_view(['GET'])

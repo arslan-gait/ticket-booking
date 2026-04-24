@@ -166,11 +166,11 @@ export default function AdminBookingsManager() {
             className="card cursor-pointer p-4 transition-colors hover:bg-[var(--background)]/40"
             role="button"
             tabIndex={0}
-            onClick={() => router.push(`/booking/${booking.id}`)}
+            onClick={() => router.push(`/booking/${booking.public_token}`)}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
-                router.push(`/booking/${booking.id}`);
+                router.push(`/booking/${booking.public_token}`);
               }
             }}
           >

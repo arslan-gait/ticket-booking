@@ -132,6 +132,7 @@ export const dictionary = {
     noSelectedSeats: "Пока ничего не выбрано",
     takenPlaces: "Занятые места",
     noTakenPlaces: "Нет занятых мест",
+    currentTimezone: "Текущий часовой пояс: {timezone}",
   },
   en: {
     brand: "Tickets",
@@ -255,6 +256,7 @@ export const dictionary = {
     noSelectedSeats: "No seats selected yet",
     takenPlaces: "Taken seats",
     noTakenPlaces: "No taken seats",
+    currentTimezone: "Current timezone: {timezone}",
   },
 } as const;
 

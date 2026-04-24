@@ -9,7 +9,7 @@ type Params = { id: string };
 export default async function TicketPage({ params }: { params: Promise<Params> }) {
   const lang = await getServerLanguage();
   const { id } = await params;
-  const booking = await getBooking(Number(id));
+  const booking = await getBooking(id);
 
   if (booking.status !== "paid") {
     return (

@@ -86,6 +86,7 @@ export type VenueDetail = {
 
 export type BookingListItem = {
   id: number;
+  public_token: string;
   event: number;
   event_name: string;
   event_date: string;
@@ -162,7 +163,7 @@ export async function getEventSeats(eventId: number): Promise<EventSeatsResponse
 }
 
 export async function createBooking(input: BookingCreateInput) {
-  return apiFetch<{ id: number }>(`/bookings/create/`, {
+  return apiFetch<{ id: number; public_token: string }>(`/bookings/create/`, {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -272,9 +273,10 @@ export async function updateBookingStatus(id: number, status: "paid" | "cancelle
   });
 }
 
-export async function getBooking(id: number) {
+export async function getBooking(token: string) {
   return apiFetch<{
     id: number;
+    public_token: string;
     customer_name: string;
     phone_number: string;
     status: string;
@@ -284,7 +286,7 @@ export async function getBooking(id: number) {
     venue_name: string;
     items: Array<{ seat_detail: { section: string; row_label: string; seat_number: number } }>;
     ticket?: { qr_data: string; is_scanned: boolean; scanned_at: string | null };
-  }>(`/bookings/${id}/`);
+  }>(`/bookings/public/${token}/`);
 }
 
 type VerifiedSeat = {
