@@ -7,7 +7,7 @@ Full-stack event ticket booking app with:
 
 ## Tech Stack
 
-- Backend: Django, Django REST Framework, SQLite
+- Backend: Django, Django REST Framework, PostgreSQL (SQLite fallback for transition)
 - Frontend: Next.js (App Router), TypeScript, Tailwind CSS
 - QR: HMAC-signed payload + single-use verification endpoint
 
@@ -28,6 +28,47 @@ python manage.py runserver 127.0.0.1:8008
 ```
 
 Backend runs at `http://127.0.0.1:8008`.
+
+### Backend Database Configuration
+
+`backend/config/settings.py` supports both SQLite and PostgreSQL via environment variables.
+
+- `DB_ENGINE=postgres` enables PostgreSQL
+- `DB_NAME` (default: `tickets`)
+- `DB_USER` (default: `tickets`)
+- `DB_PASSWORD` (default: empty)
+- `DB_HOST` (default: `127.0.0.1`)
+- `DB_PORT` (default: `5432`)
+
+If `DB_ENGINE` is not set to `postgres`, backend falls back to SQLite.
+
+### Local PostgreSQL Fresh Initialization
+
+Use this path when starting from a fresh database (no SQLite data transfer):
+
+```bash
+# 1) Install PostgreSQL and create DB/user (example)
+createdb tickets
+createuser tickets
+
+# 2) Export Django DB env vars
+export DB_ENGINE=postgres
+export DB_NAME=tickets
+export DB_USER=tickets
+export DB_PASSWORD=change-me
+export DB_HOST=127.0.0.1
+export DB_PORT=5432
+
+# 3) Apply schema and run backend
+python manage.py migrate
+python manage.py runserver 127.0.0.1:8008
+```
+
+Optional seed for local validation:
+
+```bash
+python manage.py createsuperuser
+```
 
 ## Frontend Setup
 

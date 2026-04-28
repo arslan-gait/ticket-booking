@@ -59,3 +59,41 @@ pip install gunicorn
 python manage.py migrate
 python manage.py collectstatic --noinput
 ```
+
+## PostgreSQL Prerequisites (Fresh Init, No SQLite Migration)
+
+The server is pre-production, so initialize a fresh PostgreSQL database instead of transferring SQLite data.
+
+1. Create PostgreSQL database and user (example names match app defaults):
+
+```bash
+sudo -u postgres psql -c "CREATE USER tickets WITH PASSWORD 'change-me';"
+sudo -u postgres psql -c "CREATE DATABASE tickets OWNER tickets;"
+sudo -u postgres psql -c "ALTER ROLE tickets SET client_encoding TO 'UTF8';"
+sudo -u postgres psql -c "ALTER ROLE tickets SET timezone TO 'UTC';"
+```
+
+2. Configure backend service environment with:
+
+- `DB_ENGINE=postgres`
+- `DB_NAME=tickets`
+- `DB_USER=tickets`
+- `DB_PASSWORD=<secure-password>`
+- `DB_HOST=127.0.0.1` (or DB host)
+- `DB_PORT=5432`
+
+3. Run migrations on PostgreSQL:
+
+```bash
+cd /home/debian/code/ticket-booking/backend
+source .venv/bin/activate
+python manage.py migrate
+python manage.py collectstatic --noinput
+```
+
+4. Restart backend and verify:
+
+```bash
+sudo systemctl restart ticket-booking-backend
+sudo systemctl status ticket-booking-backend
+```
