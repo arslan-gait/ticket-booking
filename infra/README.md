@@ -12,6 +12,12 @@ This folder contains production config templates for:
 - `infra/systemd/ticket-booking-backend.service`
 - `infra/systemd/ticket-booking-frontend.service`
 
+## Routing Notes
+
+- `/admin` is proxied to Django backend admin (`127.0.0.1:8000/admin`).
+- `/api/` is proxied to Django API backend.
+- `/ticket-admin/*` is served by Next.js frontend.
+
 ## Apply On VM
 
 Copy files into system paths:

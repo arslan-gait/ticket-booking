@@ -5,7 +5,7 @@ import { normalizeUserRole, USER_ROLE_COOKIE } from "@/lib/auth";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname === "/admin") {
+  if (pathname === "/ticket-admin") {
     return NextResponse.next();
   }
 
@@ -14,11 +14,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const loginUrl = new URL("/admin", request.url);
+  const loginUrl = new URL("/ticket-admin", request.url);
   loginUrl.searchParams.set("next", pathname);
   return NextResponse.redirect(loginUrl);
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/ticket-admin/:path*"],
 };

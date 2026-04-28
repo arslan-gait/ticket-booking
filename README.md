@@ -128,10 +128,16 @@ This uses the repo root `mprocs.yaml`:
   - first valid scan marks ticket as consumed
   - subsequent scans are rejected
 
-## Admin Pages
+## Admin Access
 
-- `/admin` - dashboard
-- `/admin/events` - create/list/toggle event activity
-- `/admin/venues` - create/update venues and seat layouts
-- `/admin/bookings` - filter bookings and mark paid/cancelled
-- `/admin/scan` - camera-based QR scanner
+- `/admin` - Django admin login and panel (staff/superuser accounts)
+- Create an admin user with `python manage.py createsuperuser`
+
+## Ticket Admin Pages
+
+- `/ticket-admin` - ticket admin login
+- `/ticket-admin/dashboard` - dashboard
+- `/ticket-admin/events` - create/list/toggle event activity
+- `/ticket-admin/venues` - create/update venues and seat layouts
+- `/ticket-admin/bookings` - filter bookings and mark paid/cancelled
+- `/ticket-admin/scan` - camera-based QR scanner

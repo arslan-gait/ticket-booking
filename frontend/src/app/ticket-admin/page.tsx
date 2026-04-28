@@ -5,8 +5,8 @@ import { t } from "@/lib/i18n";
 import { getServerLanguage } from "@/lib/i18n-server";
 
 function sanitizeNextPath(value: string | undefined): string {
-  if (!value || !value.startsWith("/admin/")) {
-    return "/admin/dashboard";
+  if (!value || !value.startsWith("/ticket-admin/")) {
+    return "/ticket-admin/dashboard";
   }
   return value;
 }
@@ -20,7 +20,7 @@ export default async function AdminPage({ searchParams }: Props) {
   const cookieStore = await cookies();
   const role = normalizeUserRole(cookieStore.get(USER_ROLE_COOKIE)?.value);
   if (role === "admin") {
-    redirect("/admin/dashboard");
+    redirect("/ticket-admin/dashboard");
   }
 
   const params = searchParams ? await searchParams : undefined;
@@ -48,7 +48,7 @@ export default async function AdminPage({ searchParams }: Props) {
       redirect(next);
     }
 
-    redirect(`/admin?error=1&next=${encodeURIComponent(next)}`);
+    redirect(`/ticket-admin?error=1&next=${encodeURIComponent(next)}`);
   }
 
   return (
