@@ -1,15 +1,25 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import {
+  ADMIN_ACCESS_TOKEN_COOKIE,
   ADMIN_DASHBOARD_PATH,
   ADMIN_LOGIN_PATH,
+  ADMIN_REFRESH_TOKEN_COOKIE,
+  REFRESH_TOKEN_KEY,
+  SERVER_API_BASE,
 } from "@/lib/admin-auth";
 
-async function hasValidAdminSession(request: NextRequest): Promise<boolean> {
-  const response = await fetch(new URL("/api/admin/auth/me", request.url), {
+async function hasValidAdminSession(
+  request: NextRequest,
+  accessToken?: string,
+): Promise<boolean> {
+  const token = accessToken ?? request.cookies.get(ADMIN_ACCESS_TOKEN_COOKIE)?.value;
+  if (!token) return false;
+
+  const response = await fetch(`${SERVER_API_BASE}/auth/me/`, {
     method: "GET",
     headers: {
-      cookie: request.headers.get("cookie") ?? "",
+      Authorization: `Bearer ${token}`,
       "accept-language": request.headers.get("accept-language") ?? "ru",
     },
     cache: "no-store",
@@ -17,15 +27,29 @@ async function hasValidAdminSession(request: NextRequest): Promise<boolean> {
   return response.ok;
 }
 
-async function refreshAdminAccessToken(request: NextRequest): Promise<Response> {
-  return fetch(new URL("/api/admin/auth/refresh", request.url), {
+async function refreshAdminAccessToken(request: NextRequest): Promise<string | null> {
+  const refreshToken = request.cookies.get(ADMIN_REFRESH_TOKEN_COOKIE)?.value;
+  if (!refreshToken) return null;
+
+  const response = await fetch(`${SERVER_API_BASE}/auth/refresh/`, {
     method: "POST",
     headers: {
-      cookie: request.headers.get("cookie") ?? "",
+      "Content-Type": "application/json",
       "accept-language": request.headers.get("accept-language") ?? "ru",
     },
+    body: JSON.stringify({ [REFRESH_TOKEN_KEY]: refreshToken }),
     cache: "no-store",
   });
+  if (!response.ok) return null;
+
+  const raw = await response.text();
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { access?: string };
+    return parsed.access ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function redirectToLogin(request: NextRequest) {
@@ -48,13 +72,20 @@ export async function middleware(request: NextRequest) {
   const canAccess = await hasValidAdminSession(request);
   if (canAccess) return NextResponse.next();
 
-  const refreshResponse = await refreshAdminAccessToken(request);
-  if (!refreshResponse.ok) return redirectToLogin(request);
+  const refreshedAccessToken = await refreshAdminAccessToken(request);
+  if (!refreshedAccessToken) return redirectToLogin(request);
+  const hasStaffSession = await hasValidAdminSession(request, refreshedAccessToken);
+  if (!hasStaffSession) return redirectToLogin(request);
 
   // Refresh succeeded, then force a same-URL reload so refreshed cookies are applied.
   const response = NextResponse.redirect(request.nextUrl.clone());
-  const setCookie = refreshResponse.headers.get("set-cookie");
-  if (setCookie) response.headers.set("set-cookie", setCookie);
+  response.cookies.set(ADMIN_ACCESS_TOKEN_COOKIE, refreshedAccessToken, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 15,
+  });
   return response;
 }
 
