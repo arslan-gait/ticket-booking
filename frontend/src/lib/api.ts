@@ -1,6 +1,7 @@
 const SERVER_API_BASE = process.env.API_BASE_URL ?? "http://127.0.0.1:8008/api";
 const CLIENT_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
 const API_BASE = typeof window === "undefined" ? SERVER_API_BASE : CLIENT_API_BASE;
+const MEDIA_BASE = SERVER_API_BASE.replace(/\/api$/, "");
 
 type JsonObject = Record<string, unknown>;
 
@@ -283,7 +284,7 @@ export async function updateBookingStatus(id: number, status: "paid" | "cancelle
 }
 
 export async function getBooking(token: string) {
-  return apiFetch<{
+  const booking = await apiFetch<{
     id: number;
     public_token: string;
     customer_name: string;
@@ -298,6 +299,10 @@ export async function getBooking(token: string) {
     items: Array<{ seat_detail: { section: string; row_label: string; seat_number: number } }>;
     ticket?: { qr_data: string; is_scanned: boolean; scanned_at: string | null };
   }>(`/bookings/public/${token}/`);
+  if (booking.event_image && booking.event_image.startsWith("/")) {
+    booking.event_image = `${MEDIA_BASE}${booking.event_image}`;
+  }
+  return booking;
 }
 
 type VerifiedSeat = {
