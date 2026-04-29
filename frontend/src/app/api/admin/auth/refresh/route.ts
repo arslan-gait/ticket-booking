@@ -6,6 +6,7 @@ import {
   REFRESH_TOKEN_KEY,
   SERVER_API_BASE,
 } from "@/lib/admin-auth";
+import { readJsonOrDetail } from "../_utils";
 
 type RefreshResponse = {
   access?: string;
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
     body: JSON.stringify({ [REFRESH_TOKEN_KEY]: refresh }),
     cache: "no-store",
   });
-  const payload = (await response.json()) as RefreshResponse;
+  const payload = await readJsonOrDetail<RefreshResponse>(response);
   if (!response.ok || !payload.access) {
     const denied = NextResponse.json(
       { detail: payload.detail ?? "Session expired." },

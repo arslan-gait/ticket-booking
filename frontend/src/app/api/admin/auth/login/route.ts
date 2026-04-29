@@ -6,6 +6,7 @@ import {
   REFRESH_TOKEN_KEY,
   SERVER_API_BASE,
 } from "@/lib/admin-auth";
+import { readJsonOrDetail } from "../_utils";
 
 type LoginResponse = {
   access?: string;
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     cache: "no-store",
   });
 
-  const payload = (await response.json()) as LoginResponse;
+  const payload = await readJsonOrDetail<LoginResponse>(response);
   if (!response.ok || !payload.access || !payload.refresh) {
     return NextResponse.json(
       { detail: payload.detail ?? "Authentication failed." },

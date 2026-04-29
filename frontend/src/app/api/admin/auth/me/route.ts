@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ADMIN_ACCESS_TOKEN_COOKIE, SERVER_API_BASE } from "@/lib/admin-auth";
+import { readJsonOrDetail } from "../_utils";
 
 export async function GET(request: NextRequest) {
   const access = request.cookies.get(ADMIN_ACCESS_TOKEN_COOKIE)?.value;
@@ -15,6 +16,6 @@ export async function GET(request: NextRequest) {
     },
     cache: "no-store",
   });
-  const payload = await response.json();
+  const payload = await readJsonOrDetail(response);
   return NextResponse.json(payload, { status: response.status });
 }
