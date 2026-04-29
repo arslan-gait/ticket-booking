@@ -67,7 +67,7 @@ function getAdminAccessToken(): string | null {
 async function tryRefreshAdminToken(): Promise<boolean> {
   if (typeof window === "undefined") return false;
   try {
-    const response = await fetch("/api/admin/auth/refresh", {
+    const response = await fetch("/webapi/admin/auth/refresh", {
       method: "POST",
       cache: "no-store",
     });
@@ -219,7 +219,7 @@ export function toErrorMessage(error: unknown): string {
 }
 
 export async function adminLogin(input: { username: string; password: string }) {
-  const response = await fetch("/api/admin/auth/login", {
+  const response = await fetch("/webapi/admin/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -233,7 +233,7 @@ export async function adminLogin(input: { username: string; password: string }) 
 }
 
 export async function adminLogout() {
-  await fetch("/api/admin/auth/logout", {
+  await fetch("/webapi/admin/auth/logout", {
     method: "POST",
     cache: "no-store",
   });
