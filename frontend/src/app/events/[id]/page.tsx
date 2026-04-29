@@ -1,6 +1,7 @@
 import EventBookingPanel from "@/components/event-booking-panel";
 import { getEvent, getEventSeats } from "@/lib/api";
 import LocalDateTime from "@/components/local-date-time";
+import ImageLightbox from "@/components/image-lightbox";
 import { t } from "@/lib/i18n";
 import { getServerLanguage } from "@/lib/i18n-server";
 
@@ -18,7 +19,7 @@ export default async function EventPage({ params }: { params: Promise<Params> })
         <div className="grid items-start gap-4 md:grid-cols-[280px_1fr]">
           <div className="w-full">
             {event.image ? (
-              <img
+              <ImageLightbox
                 src={event.image}
                 alt={event.name}
                 className="h-full w-auto max-w-full rounded-2xl object-contain transition duration-300 group-hover:scale-[1.02]"
