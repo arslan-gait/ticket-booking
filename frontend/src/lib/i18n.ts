@@ -72,7 +72,8 @@ export const dictionary = {
     manageVenues: "Управление площадками",
     manageBookings: "Управление бронями",
     scanTicketQr: "Сканирование QR билета",
-    scanHint: "Используйте камеру устройства, чтобы проверить и погасить QR-код билета.",
+    scanHint:
+      "Используйте камеру устройства, чтобы проверить и погасить QR-код билета.",
     qrValidUsed: "Билет валиден и отмечен как использованный.",
     invalidTicket: "Недействительный билет.",
     scanFailed: "Ошибка сканирования",
@@ -138,6 +139,7 @@ export const dictionary = {
     typeColors: "Цвета типов мест",
     bookedSeat: "Занято",
     paidSeat: "Оплачено",
+    availableSeat: "Свободно",
     selectedSeat: "Выбрано",
     noSelectedSeats: "Пока ничего не выбрано",
     availableSeats: "Свободные места",
@@ -166,7 +168,8 @@ export const dictionary = {
     createBooking: "Creating booking...",
     confirmBooking: "Confirm booking",
     clearSelection: "Clear",
-    bookingFormIncomplete: "Please select seats and fill in your name and WhatsApp number.",
+    bookingFormIncomplete:
+      "Please select seats and fill in your name and WhatsApp number.",
     selectSeatsRequired: "Please select at least one seat.",
     nameRequired: "Please enter your name.",
     phoneRequired: "Please enter a valid WhatsApp number.",
@@ -273,6 +276,7 @@ export const dictionary = {
     typeColors: "Seat type colors",
     bookedSeat: "Booked",
     paidSeat: "Paid",
+    availableSeat: "Available",
     selectedSeat: "Selected",
     noSelectedSeats: "No seats selected yet",
     availableSeats: "Available seats",
@@ -286,7 +290,11 @@ export type I18nKey = keyof (typeof dictionary)["ru"];
 const TRANSLATABLE_BOOKING_STATUSES = ["pending", "paid", "cancelled"] as const;
 type TranslatableBookingStatus = (typeof TRANSLATABLE_BOOKING_STATUSES)[number];
 
-export function t(lang: Language, key: I18nKey, params?: Record<string, string | number>): string {
+export function t(
+  lang: Language,
+  key: I18nKey,
+  params?: Record<string, string | number>,
+): string {
   let text: string = dictionary[lang][key] ?? dictionary.ru[key];
   if (!params) return text;
   for (const [paramKey, value] of Object.entries(params)) {
@@ -297,7 +305,11 @@ export function t(lang: Language, key: I18nKey, params?: Record<string, string |
 
 export function translateBookingStatus(lang: Language, status: string): string {
   const normalizedStatus = status.trim().toLowerCase();
-  if (TRANSLATABLE_BOOKING_STATUSES.includes(normalizedStatus as TranslatableBookingStatus)) {
+  if (
+    TRANSLATABLE_BOOKING_STATUSES.includes(
+      normalizedStatus as TranslatableBookingStatus,
+    )
+  ) {
     return t(lang, normalizedStatus as TranslatableBookingStatus);
   }
 

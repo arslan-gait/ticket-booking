@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { SeatItem } from "@/lib/api";
 import { useAppSettings } from "@/components/app-settings-provider";
+import { t } from "@/lib/i18n";
 
 type Props = {
   seats: SeatItem[];
@@ -15,7 +16,16 @@ type Props = {
 };
 
 const ROW_PRICE_PREFIX = "row:";
-const PRICE_COLORS = ["#3b82f6", "#8b5cf6", "#f59e0b", "#06b6d4", "#ec4899", "#22c55e", "#a16207", "#0f766e"];
+const PRICE_COLORS = [
+  "#3b82f6",
+  "#8b5cf6",
+  "#f59e0b",
+  "#06b6d4",
+  "#ec4899",
+  "#22c55e",
+  "#a16207",
+  "#0f766e",
+];
 
 type LayoutMeta = {
   width?: number;
@@ -37,7 +47,10 @@ function toFiniteNumber(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function getPriceColor(price: number, priceColorMap: Map<number, string>): string {
+function getPriceColor(
+  price: number,
+  priceColorMap: Map<number, string>,
+): string {
   if (!Number.isFinite(price) || price <= 0) return "#000000";
   return priceColorMap.get(price) || "#000000";
 }
@@ -50,9 +63,37 @@ function getSeatPrice(
   seat: Pick<SeatItem, "section" | "row_label" | "seat_type">,
   priceTiers: Record<string, number>,
 ): number {
-  const rowPrice = priceTiers[buildRowPriceKey(seat.section || "", seat.row_label || "")];
+  const rowPrice =
+    priceTiers[buildRowPriceKey(seat.section || "", seat.row_label || "")];
   if (typeof rowPrice === "number") return rowPrice;
   return priceTiers[seat.seat_type] ?? 0;
+}
+
+const bookedSeatColor = "#E5E7EB";
+const paidSeatColor = "#94a3b8";
+
+function getSeatColors(
+  seat: SeatItem,
+  priceColorMap: Map<number, string>,
+  priceTiers: Record<string, number>,
+  adminView: boolean,
+): { background: string; textColor: string } {
+  if (seat.status === "booked") {
+    return {
+      background: bookedSeatColor,
+      textColor: "#300000",
+    };
+  }
+  if (seat.status === "paid") {
+    return {
+      background: adminView ? paidSeatColor : bookedSeatColor,
+      textColor: "#300000",
+    };
+  }
+  return {
+    background: getPriceColor(getSeatPrice(seat, priceTiers), priceColorMap),
+    textColor: "#ffffff",
+  };
 }
 
 export default function SeatPicker({
@@ -65,9 +106,10 @@ export default function SeatPicker({
   adminView = false,
 }: Props) {
   const { tr } = useAppSettings();
-  const bookedSeatColor = adminView ? "#ef4444" : "#94a3b8";
-  const paidSeatColor = "#6b7280";
-  const formatSeatLabel = (seat: Pick<SeatItem, "section" | "row_label" | "seat_number">): string => {
+
+  const formatSeatLabel = (
+    seat: Pick<SeatItem, "section" | "row_label" | "seat_number">,
+  ): string => {
     const section = seat.section?.trim() || "General";
     const rowLabel = seat.row_label?.trim() || "-";
     return `${section} ${rowLabel} ${tr("row").toLowerCase()}, ${seat.seat_number} ${tr("seatPlace")}`;
@@ -95,10 +137,17 @@ export default function SeatPicker({
       .reduce((sum, s) => sum + getSeatPrice(s, priceTiers), 0);
   }, [seats, selectedSeatIds, priceTiers]);
   const sectorOccupancy = useMemo(() => {
-    const sectionMap = new Map<string, { section: string; total: number; taken: number }>();
+    const sectionMap = new Map<
+      string,
+      { section: string; total: number; taken: number }
+    >();
     for (const seat of seats) {
       const section = seat.section?.trim() || "General";
-      const current = sectionMap.get(section) ?? { section, total: 0, taken: 0 };
+      const current = sectionMap.get(section) ?? {
+        section,
+        total: 0,
+        taken: 0,
+      };
       current.total += 1;
       if (seat.status === "booked" || seat.status === "paid") {
         current.taken += 1;
@@ -108,16 +157,26 @@ export default function SeatPicker({
 
     return Array.from(sectionMap.values())
       .filter((item) => item.taken > 0)
-      .sort((a, b) => a.section.localeCompare(b.section, undefined, { numeric: true }));
+      .sort((a, b) =>
+        a.section.localeCompare(b.section, undefined, { numeric: true }),
+      );
   }, [seats]);
   const selectedSeats = useMemo(
     () =>
       seats
         .filter((seat) => selectedSeatIds.includes(seat.id))
         .sort((a, b) => {
-          const sectionCompare = (a.section || "").localeCompare(b.section || "", undefined, { numeric: true });
+          const sectionCompare = (a.section || "").localeCompare(
+            b.section || "",
+            undefined,
+            { numeric: true },
+          );
           if (sectionCompare !== 0) return sectionCompare;
-          const rowCompare = (a.row_label || "").localeCompare(b.row_label || "", undefined, { numeric: true });
+          const rowCompare = (a.row_label || "").localeCompare(
+            b.row_label || "",
+            undefined,
+            { numeric: true },
+          );
           if (rowCompare !== 0) return rowCompare;
           return a.seat_number - b.seat_number;
         }),
@@ -151,31 +210,57 @@ export default function SeatPicker({
 
   const normalizedSeats = useMemo(
     () =>
-      seats.filter((seat) => Number.isFinite(seat.cx) && Number.isFinite(seat.cy)),
+      seats.filter(
+        (seat) => Number.isFinite(seat.cx) && Number.isFinite(seat.cy),
+      ),
     [seats],
   );
 
   const viewport = useMemo(() => {
     const seatMinX = normalizedSeats.length
-      ? Math.min(...normalizedSeats.map((seat) => seat.cx - seatRadius), stageConfig.x)
+      ? Math.min(
+          ...normalizedSeats.map((seat) => seat.cx - seatRadius),
+          stageConfig.x,
+        )
       : stageConfig.x;
     const seatMaxX = normalizedSeats.length
-      ? Math.max(...normalizedSeats.map((seat) => seat.cx + seatRadius), stageConfig.x + stageConfig.width)
+      ? Math.max(
+          ...normalizedSeats.map((seat) => seat.cx + seatRadius),
+          stageConfig.x + stageConfig.width,
+        )
       : stageConfig.x + stageConfig.width;
     const seatMinY = normalizedSeats.length
-      ? Math.min(...normalizedSeats.map((seat) => seat.cy - seatRadius), stageConfig.y)
+      ? Math.min(
+          ...normalizedSeats.map((seat) => seat.cy - seatRadius),
+          stageConfig.y,
+        )
       : stageConfig.y;
     const seatMaxY = normalizedSeats.length
-      ? Math.max(...normalizedSeats.map((seat) => seat.cy + seatRadius), stageConfig.y + stageConfig.height)
+      ? Math.max(
+          ...normalizedSeats.map((seat) => seat.cy + seatRadius),
+          stageConfig.y + stageConfig.height,
+        )
       : stageConfig.y + stageConfig.height;
 
-    const minX = Math.min(seatMinX - rowLabelLeftViewportReserve, stageConfig.x);
-    const maxX = Math.max(seatMaxX + rowLabelRightViewportReserve, stageConfig.x + stageConfig.width);
+    const minX = Math.min(
+      seatMinX - rowLabelLeftViewportReserve,
+      stageConfig.x,
+    );
+    const maxX = Math.max(
+      seatMaxX + rowLabelRightViewportReserve,
+      stageConfig.x + stageConfig.width,
+    );
     const minY = Math.min(seatMinY - sectionLabelTopReserve, stageConfig.y);
     const maxY = Math.max(seatMaxY, stageConfig.y + stageConfig.height);
 
-    const preferredWidth = Math.max(defaultWidth, toFiniteNumber(parsedLayoutMeta.width, defaultWidth));
-    const preferredHeight = Math.max(defaultHeight, toFiniteNumber(parsedLayoutMeta.height, defaultHeight));
+    const preferredWidth = Math.max(
+      defaultWidth,
+      toFiniteNumber(parsedLayoutMeta.width, defaultWidth),
+    );
+    const preferredHeight = Math.max(
+      defaultHeight,
+      toFiniteNumber(parsedLayoutMeta.height, defaultHeight),
+    );
 
     return {
       width: Math.max(preferredWidth, Math.ceil(maxX - minX + padding * 2)),
@@ -211,15 +296,29 @@ export default function SeatPicker({
       groupedSeats.set(groupKey, group);
     }
 
-    const clusters: Array<{ label: string; minX: number; maxX: number; centerY: number; count: number }> = [];
+    const clusters: Array<{
+      label: string;
+      minX: number;
+      maxX: number;
+      centerY: number;
+      count: number;
+    }> = [];
 
     for (const [groupKey, groupSeats] of groupedSeats.entries()) {
       const label = groupKey.split("::")[1];
       const sortedByY = [...groupSeats].sort((a, b) => a.cy - b.cy);
-      const localClusters: Array<{ label: string; minX: number; maxX: number; centerY: number; count: number }> = [];
+      const localClusters: Array<{
+        label: string;
+        minX: number;
+        maxX: number;
+        centerY: number;
+        count: number;
+      }> = [];
 
       for (const seat of sortedByY) {
-        const existing = localClusters.find((cluster) => Math.abs(cluster.centerY - seat.cy) <= rowMergeTolerance);
+        const existing = localClusters.find(
+          (cluster) => Math.abs(cluster.centerY - seat.cy) <= rowMergeTolerance,
+        );
         if (!existing) {
           localClusters.push({
             label,
@@ -233,7 +332,8 @@ export default function SeatPicker({
 
         existing.minX = Math.min(existing.minX, seat.cx);
         existing.maxX = Math.max(existing.maxX, seat.cx);
-        existing.centerY = (existing.centerY * existing.count + seat.cy) / (existing.count + 1);
+        existing.centerY =
+          (existing.centerY * existing.count + seat.cy) / (existing.count + 1);
         existing.count += 1;
       }
 
@@ -244,14 +344,21 @@ export default function SeatPicker({
   }, [normalizedSeats]);
 
   const sectionLabels = useMemo(() => {
-    const sections = new Map<string, { minX: number; maxX: number; minY: number }>();
+    const sections = new Map<
+      string,
+      { minX: number; maxX: number; minY: number }
+    >();
 
     for (const seat of normalizedSeats) {
       const sectionName = seat.section?.trim();
       if (!sectionName) continue;
       const current = sections.get(sectionName);
       if (!current) {
-        sections.set(sectionName, { minX: seat.cx, maxX: seat.cx, minY: seat.cy });
+        sections.set(sectionName, {
+          minX: seat.cx,
+          maxX: seat.cx,
+          minY: seat.cy,
+        });
         continue;
       }
       current.minX = Math.min(current.minX, seat.cx);
@@ -331,14 +438,28 @@ export default function SeatPicker({
               {normalizedSeats.map((seat) => {
                 const selected = selectedSeatIds.includes(seat.id);
                 const disabled = seat.status !== "open";
-                const baseColor = getPriceColor(getSeatPrice(seat, priceTiers), priceColorMap);
-                const currentSeatRadius = selected ? seatRadius + 2 : seatRadius;
-                const background = disabled ? (seat.status === "booked" ? bookedSeatColor : paidSeatColor) : baseColor;
-                const textColor = !disabled
-                  ? "#ffffff"
-                  : seat.status === "booked" && !adminView
-                    ? "#334155"
-                    : "#f9fafb";
+                const currentSeatRadius = selected
+                  ? seatRadius + 2
+                  : seatRadius;
+                const { background, textColor } = getSeatColors(
+                  seat,
+                  priceColorMap,
+                  priceTiers,
+                  adminView,
+                );
+
+                const seatStatus =
+                  seat.status === "booked"
+                    ? tr("bookedSeat")
+                    : seat.status === "paid"
+                      ? adminView
+                        ? tr("paidSeat")
+                        : tr("bookedSeat")
+                      : tr("availableSeat");
+
+                const seatTitle = `${formatSeatLabel(seat)} - ${tr("price")}: ${getSeatPrice(seat, priceTiers)} ₸
+                  Статус: ${seatStatus}
+                `;
 
                 return (
                   <button
@@ -354,16 +475,20 @@ export default function SeatPicker({
                       height: currentSeatRadius * 2,
                       background,
                       color: textColor,
-                      border: selected ? "2px solid #111827" : "1px solid rgba(15, 23, 42, 0.25)",
+                      border: selected
+                        ? "2px solid #111827"
+                        : "1px solid rgba(15, 23, 42, 0.25)",
                       fontSize: selected ? 13 : 12,
                       fontWeight: selected ? 800 : 700,
-                      boxShadow: selected ? "0 0 0 2px rgba(15, 23, 42, 0.15)" : "none",
+                      boxShadow: selected
+                        ? "0 0 0 2px rgba(15, 23, 42, 0.15)"
+                        : "none",
                       zIndex: selected ? 3 : 1,
                       opacity: disabled ? 0.85 : 1,
                     }}
                     disabled={disabled}
                     onClick={() => onToggleSeat(seat.id)}
-                    title={formatSeatLabel(seat)}
+                    title={seatTitle}
                   >
                     {seat.seat_number}
                     {selected ? (
@@ -398,7 +523,10 @@ export default function SeatPicker({
                     position: "absolute",
                     left: (section.minX + section.maxX) / 2 + viewport.offsetX,
                     transform: "translateX(-50%)",
-                    top: section.minY + viewport.offsetY - sectionLabelVerticalOffset,
+                    top:
+                      section.minY +
+                      viewport.offsetY -
+                      sectionLabelVerticalOffset,
                     fontSize: 14,
                     lineHeight: 1,
                     fontWeight: 700,
@@ -416,18 +544,29 @@ export default function SeatPicker({
               ))}
               {rowLabels.map((row, idx) => {
                 const isNumericRowLabel = /^\d+$/.test(row.label.trim());
-                const rowText = isNumericRowLabel ? `${tr("row")} ${row.label}` : row.label;
+                const rowText = isNumericRowLabel
+                  ? `${tr("row")} ${row.label}`
+                  : row.label;
                 const rowSpanWidth = row.maxX - row.minX;
                 const showRightLabel = rowSpanWidth > 56;
 
                 return (
-                  <div key={`row-${row.label}-${Math.round(row.centerY)}-${Math.round(row.minX)}-${idx}`}>
+                  <div
+                    key={`row-${row.label}-${Math.round(row.centerY)}-${Math.round(row.minX)}-${idx}`}
+                  >
                     <span
                       style={{
                         position: "absolute",
-                        left: row.minX + viewport.offsetX - seatRadius - leftRowLabelGap,
+                        left:
+                          row.minX +
+                          viewport.offsetX -
+                          seatRadius -
+                          leftRowLabelGap,
                         transform: "translateX(-100%)",
-                        top: row.centerY + viewport.offsetY - rowLabelVerticalOffset,
+                        top:
+                          row.centerY +
+                          viewport.offsetY -
+                          rowLabelVerticalOffset,
                         fontSize: 14,
                         lineHeight: 1,
                         fontWeight: 700,
@@ -445,7 +584,10 @@ export default function SeatPicker({
                         style={{
                           position: "absolute",
                           left: row.maxX + viewport.offsetX + seatRadius + 10,
-                          top: row.centerY + viewport.offsetY - rowLabelVerticalOffset,
+                          top:
+                            row.centerY +
+                            viewport.offsetY -
+                            rowLabelVerticalOffset,
                           fontSize: 14,
                           lineHeight: 1,
                           fontWeight: 700,
@@ -471,19 +613,31 @@ export default function SeatPicker({
           {uniquePrices.map((price) => {
             const color = getPriceColor(price, priceColorMap);
             return (
-              <span key={`price-${price}`} className="inline-flex items-center gap-2 rounded border border-[var(--border)] px-2 py-1">
-                <span className="inline-block h-3 w-3 rounded" style={{ background: color }} />
+              <span
+                key={`price-${price}`}
+                className="inline-flex items-center gap-2 rounded border border-[var(--border)] px-2 py-1"
+              >
+                <span
+                  className="inline-block h-3 w-3 rounded"
+                  style={{ background: color }}
+                />
                 {price} ₸
               </span>
             );
           })}
           <span className="inline-flex items-center gap-2 rounded border border-[var(--border)] px-2 py-1">
-            <span className="inline-block h-3 w-3 rounded" style={{ background: bookedSeatColor }} />
+            <span
+              className="inline-block h-3 w-3 rounded"
+              style={{ background: bookedSeatColor }}
+            />
             {tr("bookedSeat")}
           </span>
           {adminView ? (
             <span className="inline-flex items-center gap-2 rounded border border-[var(--border)] px-2 py-1">
-              <span className="inline-block h-3 w-3 rounded" style={{ background: paidSeatColor }} />
+              <span
+                className="inline-block h-3 w-3 rounded"
+                style={{ background: paidSeatColor }}
+              />
               {tr("paidSeat")}
             </span>
           ) : null}
@@ -517,11 +671,17 @@ export default function SeatPicker({
           ) : (
             <div className="flex flex-wrap gap-2 text-sm">
               {sectorOccupancy.map((sector) => {
-                const percent = sector.total > 0 ? Math.round((sector.taken / sector.total) * 100) : 0;
+                const percent =
+                  sector.total > 0
+                    ? Math.round((sector.taken / sector.total) * 100)
+                    : 0;
                 return (
-                <span key={`taken-${sector.section}`} className="rounded border border-[var(--border)] px-2 py-1">
-                  {sector.section}: {sector.taken}/{sector.total} ({percent}%)
-                </span>
+                  <span
+                    key={`taken-${sector.section}`}
+                    className="rounded border border-[var(--border)] px-2 py-1"
+                  >
+                    {sector.section}: {sector.taken}/{sector.total} ({percent}%)
+                  </span>
                 );
               })}
             </div>
@@ -535,7 +695,10 @@ export default function SeatPicker({
         ) : (
           <div className="flex flex-wrap gap-2 text-sm">
             {selectedSeats.map((seat) => (
-              <span key={`selected-${seat.id}`} className="rounded border border-[var(--border)] px-2 py-1">
+              <span
+                key={`selected-${seat.id}`}
+                className="rounded border border-[var(--border)] px-2 py-1"
+              >
                 {formatSeatLabel(seat)}
               </span>
             ))}
