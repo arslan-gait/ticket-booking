@@ -1,5 +1,6 @@
 from rest_framework import viewsets
 
+from common.permissions import IsActiveStaffUser, IsStaffWriteOrReadOnly
 from common.viewset_mixins import ActionSerializerMixin
 
 from .models import Event, Venue
@@ -15,6 +16,7 @@ from .serializers import (
 
 class VenueViewSet(ActionSerializerMixin, viewsets.ModelViewSet):
     queryset = Venue.objects.prefetch_related('seats').all()
+    permission_classes = [IsStaffWriteOrReadOnly]
     default_serializer_class = VenueDetailSerializer
     serializer_action_classes = {
         'list': VenueListSerializer,
@@ -26,6 +28,7 @@ class VenueViewSet(ActionSerializerMixin, viewsets.ModelViewSet):
 
 class EventViewSet(ActionSerializerMixin, viewsets.ModelViewSet):
     queryset = Event.objects.select_related('venue').all()
+    permission_classes = [IsStaffWriteOrReadOnly]
     default_serializer_class = EventDetailSerializer
     serializer_action_classes = {
         'list': EventListSerializer,
@@ -37,6 +40,8 @@ class EventViewSet(ActionSerializerMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         include_inactive = self.request.query_params.get('include_inactive') == '1'
+        if self.action == 'list' and include_inactive and not IsActiveStaffUser().has_permission(self.request, self):
+            include_inactive = False
         if self.action == 'list' and not include_inactive:
             qs = qs.filter(is_active=True)
         return qs

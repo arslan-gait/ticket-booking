@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useMemo } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import { useAppSettings } from "@/components/app-settings-provider";
+import { ADMIN_LOGIN_PATH } from "@/lib/admin-auth";
+import { adminLogout } from "@/lib/api";
 
 export default function TopbarMenu() {
   const pathname = usePathname();
+  const router = useRouter();
   const { tr } = useAppSettings();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const navItems = useMemo(() => {
     return [{ href: "/", label: tr("navEvents") }];
@@ -16,6 +20,20 @@ export default function TopbarMenu() {
   function isActivePath(href: string): boolean {
     if (href === "/") return pathname === "/";
     return pathname === href || pathname.startsWith(`${href}/`);
+  }
+
+  const isAdminRoute = pathname.startsWith("/ticket-admin");
+
+  async function handleLogout() {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await adminLogout();
+    } finally {
+      router.replace(ADMIN_LOGIN_PATH);
+      router.refresh();
+      setIsLoggingOut(false);
+    }
   }
 
   return (
@@ -45,6 +63,16 @@ export default function TopbarMenu() {
             </Link>
           );
         })}
+        {isAdminRoute && pathname !== ADMIN_LOGIN_PATH ? (
+          <button
+            type="button"
+            className="button button-secondary whitespace-nowrap"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+          >
+            {isLoggingOut ? `${tr("adminLogoutButton")}...` : tr("adminLogoutButton")}
+          </button>
+        ) : null}
       </div>
     </nav>
   );

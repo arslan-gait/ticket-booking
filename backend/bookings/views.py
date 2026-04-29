@@ -1,10 +1,11 @@
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import status, viewsets
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
+from common.permissions import IsActiveStaffUser
 from common.viewset_mixins import ActionSerializerMixin
 from events.models import Event, Seat
 
@@ -63,6 +64,7 @@ class BookingViewSet(ActionSerializerMixin, viewsets.ReadOnlyModelViewSet):
         .all()
     )
     default_serializer_class = BookingDetailSerializer
+    permission_classes = [IsActiveStaffUser]
     serializer_action_classes = {
         'list': BookingListSerializer,
     }
@@ -176,6 +178,7 @@ def event_seat_availability(request, event_id):
 
 
 @api_view(['POST'])
+@permission_classes([IsActiveStaffUser])
 def verify_ticket(request):
     serializer = VerifyTicketSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)

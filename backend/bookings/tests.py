@@ -2,6 +2,7 @@ import uuid
 from datetime import timedelta
 from pathlib import Path
 
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -37,6 +38,12 @@ class BookingApiTests(APITestCase):
             is_active=True,
             price_tiers={'vip': 100, 'regular': 50},
         )
+        user_model = get_user_model()
+        self.staff_user = user_model.objects.create_user(
+            username='staff-bookings',
+            password='staff-pass',
+            is_staff=True,
+        )
 
     def _create_booking_payload(self, seat_ids):
         return {
@@ -45,6 +52,9 @@ class BookingApiTests(APITestCase):
             'phone_number': '+10000000',
             'seat_ids': seat_ids,
         }
+
+    def _authenticate_staff(self):
+        self.client.force_authenticate(user=self.staff_user)
 
     def test_create_booking_success_returns_201_and_contract(self):
         response = self.client.post(
@@ -144,6 +154,7 @@ class BookingApiTests(APITestCase):
         self.assertEqual(response.data[TAKEN_SEAT_IDS_KEY], [self.seat_vip.id])
 
     def test_verify_ticket_invalid_qr_returns_400(self):
+        self._authenticate_staff()
         response = self.client.post(
             reverse('verify-ticket'),
             {'qr_data': 'invalid'},
@@ -155,6 +166,7 @@ class BookingApiTests(APITestCase):
         self.assertIn(ERROR_KEY, response.data)
 
     def test_verify_ticket_not_found_returns_404(self):
+        self._authenticate_staff()
         qr_data = generate_qr_data(ticket_id=uuid.uuid4(), booking_id=123)
         response = self.client.post(reverse('verify-ticket'), {'qr_data': qr_data}, format='json')
 
@@ -163,6 +175,7 @@ class BookingApiTests(APITestCase):
         self.assertIn(ERROR_KEY, response.data)
 
     def test_verify_ticket_cancelled_booking_returns_invalid(self):
+        self._authenticate_staff()
         booking = Booking.objects.create(
             event=self.event,
             customer_name='Carl',
@@ -181,6 +194,7 @@ class BookingApiTests(APITestCase):
         self.assertIn(ERROR_KEY, response.data)
 
     def test_verify_ticket_unpaid_booking_returns_invalid(self):
+        self._authenticate_staff()
         booking = Booking.objects.create(
             event=self.event,
             customer_name='Dina',
@@ -199,6 +213,7 @@ class BookingApiTests(APITestCase):
         self.assertIn(ERROR_KEY, response.data)
 
     def test_verify_ticket_already_scanned_returns_invalid(self):
+        self._authenticate_staff()
         booking = Booking.objects.create(
             event=self.event,
             customer_name='Eva',
@@ -221,6 +236,7 @@ class BookingApiTests(APITestCase):
         self.assertIn(ERROR_KEY, response.data)
 
     def test_verify_ticket_consume_marks_ticket_scanned(self):
+        self._authenticate_staff()
         booking = Booking.objects.create(
             event=self.event,
             customer_name='Fiona',

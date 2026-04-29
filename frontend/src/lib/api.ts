@@ -1,3 +1,5 @@
+import { ADMIN_ACCESS_TOKEN_COOKIE } from "@/lib/admin-auth";
+
 const SERVER_API_BASE = process.env.API_BASE_URL ?? "http://127.0.0.1:8008/api";
 const CLIENT_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
 const API_BASE = typeof window === "undefined" ? SERVER_API_BASE : CLIENT_API_BASE;
@@ -46,6 +48,41 @@ function parseApiErrorMessage(rawText: string, response: Response): string {
   } catch {
     return rawText;
   }
+}
+
+function readClientCookie(name: string): string | null {
+  if (typeof window === "undefined") return null;
+  const key = `${name}=`;
+  const item = document.cookie
+    .split(";")
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith(key));
+  return item ? decodeURIComponent(item.slice(key.length)) : null;
+}
+
+function getAdminAccessToken(): string | null {
+  return readClientCookie(ADMIN_ACCESS_TOKEN_COOKIE);
+}
+
+async function tryRefreshAdminToken(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  try {
+    const response = await fetch("/api/admin/auth/refresh", {
+      method: "POST",
+      cache: "no-store",
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+function redirectAdminToLoginOnAuthFailure(status: number): void {
+  if (typeof window === "undefined") return;
+  if (status !== 401 && status !== 403) return;
+  if (!window.location.pathname.startsWith("/ticket-admin")) return;
+  if (window.location.pathname === "/ticket-admin/login") return;
+  window.location.replace("/ticket-admin/login");
 }
 
 export type EventItem = {
@@ -135,17 +172,43 @@ export type BookingCreateInput = {
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const isFormDataBody = typeof FormData !== "undefined" && init?.body instanceof FormData;
-  const response = await fetch(`${API_BASE}${path}`, {
+  const headers = new Headers(init?.headers ?? {});
+  if (!headers.has("Accept-Language")) {
+    headers.set("Accept-Language", getApiLanguageHeader());
+  }
+  if (!isFormDataBody && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  const accessToken = getAdminAccessToken();
+  if (accessToken && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
+  let response = await fetch(`${API_BASE}${path}`, {
     ...init,
-    headers: {
-      "Accept-Language": getApiLanguageHeader(),
-      ...(isFormDataBody ? {} : { "Content-Type": "application/json" }),
-      ...(init?.headers ?? {}),
-    },
+    headers,
     cache: "no-store",
   });
+  if (
+    response.status === 401 &&
+    typeof window !== "undefined" &&
+    !path.startsWith("/admin/auth/")
+  ) {
+    const refreshed = await tryRefreshAdminToken();
+    if (refreshed) {
+      response = await fetch(`${API_BASE}${path}`, {
+        ...init,
+        headers: new Headers({
+          ...Object.fromEntries(headers.entries()),
+          ...(getAdminAccessToken() ? { Authorization: `Bearer ${getAdminAccessToken()}` } : {}),
+        }),
+        cache: "no-store",
+      });
+    }
+  }
   if (!response.ok) {
     const text = await response.text();
+    redirectAdminToLoginOnAuthFailure(response.status);
     throw new Error(parseApiErrorMessage(text, response));
   }
   return (await response.json()) as T;
@@ -153,6 +216,27 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
 export function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+export async function adminLogin(input: { username: string; password: string }) {
+  const response = await fetch("/api/admin/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(parseApiErrorMessage(text, response));
+  }
+  return response.json() as Promise<{ user: { username: string; is_staff: boolean; is_active: boolean } }>;
+}
+
+export async function adminLogout() {
+  await fetch("/api/admin/auth/logout", {
+    method: "POST",
+    cache: "no-store",
+  });
 }
 
 export async function getEvents(): Promise<EventItem[]> {

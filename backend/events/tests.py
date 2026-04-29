@@ -1,4 +1,5 @@
 from django.urls import reverse
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -6,6 +7,15 @@ from .models import Venue
 
 
 class VenueSeatSyncTests(APITestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.staff_user = user_model.objects.create_user(
+            username='staff',
+            password='staff-pass',
+            is_staff=True,
+        )
+        self.client.force_authenticate(user=self.staff_user)
+
     def test_update_venue_replaces_seats(self):
         create_payload = {
             'name': 'Main Hall',
