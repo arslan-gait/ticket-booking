@@ -1,8 +1,14 @@
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import (
+    action,
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from common.permissions import IsActiveStaffUser
@@ -42,6 +48,7 @@ from .domain.constants import (
 )
 from .domain.booking_creation import BookingCreationFailure, create_booking as create_booking_record
 from .domain.ticket_validation import validate_ticket_state
+from .domain.telegram_notifications import notify_new_booking
 from .models import Booking, BookingItem, Ticket
 from .serializers import (
     BookingDetailSerializer,
@@ -105,6 +112,8 @@ class BookingViewSet(ActionSerializerMixin, viewsets.ReadOnlyModelViewSet):
 
 
 @api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def create_booking(request):
     serializer = CreateBookingSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -118,6 +127,7 @@ def create_booking(request):
         )
 
     booking.refresh_from_db()
+    notify_new_booking(booking)
     return Response(
         BookingDetailSerializer(booking).data,
         status=status.HTTP_201_CREATED,

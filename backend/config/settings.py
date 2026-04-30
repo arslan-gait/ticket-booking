@@ -103,7 +103,10 @@ CORS_ALLOWED_ORIGINS = get_list_env("CORS_ALLOWED_ORIGINS", default=[
     "http://localhost:3000",
 ])
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = get_list_env("CSRF_TRUSTED_ORIGINS", default=[])
+CSRF_TRUSTED_ORIGINS = get_list_env("CSRF_TRUSTED_ORIGINS", default=[
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+])
 
 ROOT_URLCONF = 'config.urls'
 
@@ -189,6 +192,13 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 BACKEND_BASE_URL = os.getenv("BACKEND_BASE_URL", "").rstrip("/")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+ADMIN_BOOKINGS_URL = os.getenv("ADMIN_BOOKINGS_URL", "").strip()
+TELEGRAM_BOOKING_NOTIFICATIONS_ENABLED = get_bool_env(
+    "TELEGRAM_BOOKING_NOTIFICATIONS_ENABLED",
+    default=True,
+)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
