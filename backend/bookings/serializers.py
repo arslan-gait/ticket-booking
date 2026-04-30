@@ -32,7 +32,7 @@ class BookingListSerializer(serializers.ModelSerializer):
         model = Booking
         fields = [
             'id', 'event', 'event_name', 'event_date', 'customer_name',
-            'phone_number', 'status', 'total_price', 'seat_count', 'public_token', 'created_at',
+            'phone_number', 'commentary', 'status', 'total_price', 'seat_count', 'public_token', 'created_at',
         ]
 
 
@@ -64,7 +64,7 @@ class BookingDetailSerializer(serializers.ModelSerializer):
         model = Booking
         fields = [
             'id', 'event', 'event_name', 'event_image', 'event_date', 'venue_name', 'venue_address_line',
-            'customer_name', 'phone_number', 'status', 'total_price',
+            'customer_name', 'phone_number', 'commentary', 'status', 'total_price',
             'items', 'ticket', 'public_token', 'created_at',
         ]
 
@@ -84,4 +84,8 @@ class VerifyTicketSerializer(serializers.Serializer):
 class UpdateBookingStatusSerializer(serializers.Serializer):
     status = serializers.ChoiceField(
         choices=[BookingStatus.PAID, BookingStatus.CANCELLED],
+    )
+    commentary = serializers.CharField(
+        required=False,
+        allow_blank=True,
     )
