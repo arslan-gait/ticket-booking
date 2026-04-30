@@ -37,7 +37,7 @@ export const dictionary = {
     phoneRequired: "Введите корректный номер WhatsApp.",
     selectedSeats: "Выбрано мест",
     total: "Итого",
-    bookingSuccess: "Бронь успешно создана",
+    bookingSuccess: "Бронь успешно создана, ожидайте подтверждения",
     name: "Имя",
     whatsapp: "WhatsApp",
     event: "Событие",
@@ -47,6 +47,8 @@ export const dictionary = {
     manualPaymentTitle: "Инструкция по оплате",
     manualPaymentText:
       "После подтверждения брони, администратор напишет вам в WhatsApp для оплаты.",
+    manualPaymentTextSuccess:
+      "Бронь создана и будет ожидать подтверждения администратором, который отправит запрос на оплату.",
     openTicketPage: "Открыть страницу билета",
     ticketNotActive: "Билет пока не активен",
     ticketNotActiveText:
@@ -175,7 +177,7 @@ export const dictionary = {
     phoneRequired: "Please enter a valid WhatsApp number.",
     selectedSeats: "Selected seats",
     total: "Total",
-    bookingSuccess: "Booking successfully created",
+    bookingSuccess: "Reservation successfully created, awaiting confirmation",
     name: "Name",
     whatsapp: "WhatsApp",
     event: "Event",
@@ -185,6 +187,8 @@ export const dictionary = {
     manualPaymentTitle: "Payment instructions",
     manualPaymentText:
       "After confirmation of your booking, our admin will message you on WhatsApp for payment.",
+    manualPaymentTextSuccess:
+      "The reservation has been created and is awaiting administrator confirmation, who will send a payment request.",
     openTicketPage: "Open ticket page",
     ticketNotActive: "Ticket not active yet",
     ticketNotActiveText:

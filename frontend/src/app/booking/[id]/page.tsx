@@ -3,21 +3,30 @@ import { getBooking } from "@/lib/api";
 import { t, translateBookingStatus } from "@/lib/i18n";
 import { getServerLanguage } from "@/lib/i18n-server";
 import ImageLightbox from "@/components/image-lightbox";
+import BookingSuccessOverlay from "@/components/booking-success-overlay";
 
 type Params = { id: string };
 
 export default async function BookingPage({
   params,
+  searchParams,
 }: {
   params: Promise<Params>;
+  searchParams: Promise<{ new?: string }>;
 }) {
   const lang = await getServerLanguage();
   const { id } = await params;
+  const { new: isNew } = await searchParams;
   const booking = await getBooking(id);
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">{t(lang, "bookingSuccess")}</h1>
+      {isNew === "1" && (
+        <BookingSuccessOverlay
+          message={t(lang, "bookingSuccess")}
+          instruction={t(lang, "manualPaymentTextSuccess")}
+        />
+      )}
       <div className="card p-4">
         <div className="mx-auto w-full max-w-sm">
           {booking.event_image ? (
