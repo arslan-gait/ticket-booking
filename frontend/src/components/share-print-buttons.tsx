@@ -27,7 +27,7 @@ export default function SharePrintButtons() {
 
   async function handleShare() {
     setOpen(false);
-    const url = window.location.href;
+    const url = window.location.origin + window.location.pathname;
     if (navigator.share) {
       await navigator.share({ url });
     } else {
