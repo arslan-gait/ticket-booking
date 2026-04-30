@@ -12,6 +12,7 @@ class Booking(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='bookings')
     customer_name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=50)
+    commentary = models.TextField(blank=True, default='')
     status = models.CharField(
         max_length=20,
         choices=BookingStatus.choices,

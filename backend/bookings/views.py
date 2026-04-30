@@ -12,6 +12,7 @@ from events.models import Event, Seat
 from .domain.constants import (
     BOOKING_KEY,
     CONSUMED_KEY,
+    COMMENTARY_KEY,
     CUSTOMER_NAME_KEY,
     ERROR_KEY,
     EVENT_DATE_KEY,
@@ -79,16 +80,22 @@ class BookingViewSet(ActionSerializerMixin, viewsets.ReadOnlyModelViewSet):
             qs = qs.filter(status=status_filter)
         return qs
 
-    @action(detail=True, methods=['post'], url_path='update-status')
+    @action(detail=True, methods=['post', 'patch'], url_path='update-status')
     def update_status(self, request, pk=None):
         booking = self.get_object()
         serializer = UpdateBookingStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         new_status = serializer.validated_data['status']
+        has_commentary = COMMENTARY_KEY in serializer.validated_data
+        commentary = serializer.validated_data.get(COMMENTARY_KEY)
         with transaction.atomic():
             booking.status = new_status
-            booking.save(update_fields=['status', 'updated_at'])
+            update_fields = ['status', 'updated_at']
+            if has_commentary:
+                booking.commentary = commentary
+                update_fields.append(COMMENTARY_KEY)
+            booking.save(update_fields=update_fields)
             if new_status == BookingStatus.CANCELLED:
                 booking.items.update(is_active=False)
             elif new_status == BookingStatus.PAID:

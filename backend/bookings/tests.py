@@ -11,6 +11,7 @@ from rest_framework.test import APITestCase
 from events.models import Event, Seat, Venue
 
 from .domain.constants import (
+    COMMENTARY_KEY,
     CONSUMED_KEY,
     ERROR_KEY,
     MISSING_SEAT_TYPES_KEY,
@@ -276,6 +277,59 @@ class BookingApiTests(APITestCase):
 
         self.assertEqual(public_response.status_code, status.HTTP_200_OK)
         self.assertEqual(public_response.data['public_token'], public_token)
+
+    def test_update_status_accepts_optional_commentary_on_cancel(self):
+        self._authenticate_staff()
+        booking = Booking.objects.create(
+            event=self.event,
+            customer_name='Gina',
+            phone_number='+1777',
+            status=BookingStatus.PAID,
+            total_price='100.00',
+        )
+        BookingItem.objects.create(
+            booking=booking,
+            event=self.event,
+            seat=self.seat_vip,
+            price='100.00',
+            is_active=True,
+        )
+
+        response = self.client.patch(
+            reverse('booking-update-status', kwargs={'pk': booking.id}),
+            {'status': BookingStatus.CANCELLED, COMMENTARY_KEY: 'Client requested cancellation'},
+            format='json',
+        )
+        booking.refresh_from_db()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], BookingStatus.CANCELLED)
+        self.assertEqual(response.data[COMMENTARY_KEY], 'Client requested cancellation')
+        self.assertEqual(booking.commentary, 'Client requested cancellation')
+        self.assertFalse(booking.items.first().is_active)
+
+    def test_update_status_keeps_commentary_when_field_not_provided(self):
+        self._authenticate_staff()
+        booking = Booking.objects.create(
+            event=self.event,
+            customer_name='Hank',
+            phone_number='+1888',
+            commentary='Initial note',
+            status=BookingStatus.PENDING,
+            total_price='100.00',
+        )
+
+        response = self.client.post(
+            reverse('booking-update-status', kwargs={'pk': booking.id}),
+            {'status': BookingStatus.PAID},
+            format='json',
+        )
+        booking.refresh_from_db()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], BookingStatus.PAID)
+        self.assertEqual(response.data[COMMENTARY_KEY], 'Initial note')
+        self.assertEqual(booking.commentary, 'Initial note')
 
 
 class ArchitectureGuardTests(APITestCase):
