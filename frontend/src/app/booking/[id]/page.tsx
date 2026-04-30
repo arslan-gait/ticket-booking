@@ -4,6 +4,9 @@ import { t, translateBookingStatus } from "@/lib/i18n";
 import { getServerLanguage } from "@/lib/i18n-server";
 import ImageLightbox from "@/components/image-lightbox";
 import BookingSuccessOverlay from "@/components/booking-success-overlay";
+import CheckCircleIcon from "@/components/icons/check-circle-icon";
+import ClockIcon from "@/components/icons/clock-icon";
+import XCircleIcon from "@/components/icons/x-circle-icon";
 
 type Params = { id: string };
 
@@ -61,10 +64,12 @@ export default async function BookingPage({
             {t(lang, "addressLine")}: <b>{booking.venue_address_line}</b>
           </p>
         ) : null}
-        <p>
-          {t(lang, "status")}:{" "}
-          <b>{translateBookingStatus(lang, booking.status)}</b>
-        </p>
+        <div className="flex items-center gap-2">
+          {booking.status === "paid" && <CheckCircleIcon className="w-8 h-8 text-emerald-600" />}
+          {booking.status === "pending" && <ClockIcon className="w-8 h-8 text-amber-500" />}
+          {booking.status === "cancelled" && <XCircleIcon className="w-8 h-8 text-red-500" />}
+          <span className="text-sm font-medium">{translateBookingStatus(lang, booking.status)}</span>
+        </div>
         <p>
           {t(lang, "total")}: <b>{booking.total_price} ₸</b>
         </p>
