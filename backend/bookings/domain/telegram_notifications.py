@@ -1,5 +1,6 @@
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from urllib import error, request
 
 from django.conf import settings
@@ -18,6 +19,8 @@ from .constants import (
 )
 
 logger = logging.getLogger(__name__)
+NOTIFICATION_WORKERS = 2
+_notification_executor = ThreadPoolExecutor(max_workers=NOTIFICATION_WORKERS)
 
 
 def notify_new_booking(booking):
@@ -50,6 +53,32 @@ def notify_new_booking(booking):
             booking.id,
             exc,
         )
+
+
+def notify_new_booking_async(booking_id):
+    try:
+        _notification_executor.submit(_notify_new_booking_by_id, booking_id)
+    except Exception as exc:
+        logger.warning(
+            'Telegram booking notification scheduling failed for booking_id=%s: %s',
+            booking_id,
+            exc,
+        )
+
+
+def _notify_new_booking_by_id(booking_id):
+    from ..models import Booking
+
+    try:
+        booking = Booking.objects.select_related('event').get(id=booking_id)
+    except Booking.DoesNotExist:
+        logger.warning(
+            'Telegram booking notification skipped: booking_id=%s not found',
+            booking_id,
+        )
+        return
+
+    notify_new_booking(booking)
 
 
 def _build_send_message_url(bot_token):

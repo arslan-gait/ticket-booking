@@ -48,7 +48,7 @@ from .domain.constants import (
 )
 from .domain.booking_creation import BookingCreationFailure, create_booking as create_booking_record
 from .domain.ticket_validation import validate_ticket_state
-from .domain.telegram_notifications import notify_new_booking
+from .domain.telegram_notifications import notify_new_booking_async
 from .models import Booking, BookingItem, Ticket
 from .serializers import (
     BookingDetailSerializer,
@@ -127,7 +127,7 @@ def create_booking(request):
         )
 
     booking.refresh_from_db()
-    notify_new_booking(booking)
+    transaction.on_commit(lambda: notify_new_booking_async(booking.id))
     return Response(
         BookingDetailSerializer(booking).data,
         status=status.HTTP_201_CREATED,

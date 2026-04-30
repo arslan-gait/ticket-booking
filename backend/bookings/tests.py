@@ -1,5 +1,4 @@
 import uuid
-import json
 from datetime import timedelta
 from pathlib import Path
 from unittest.mock import patch
@@ -93,8 +92,8 @@ class BookingApiTests(APITestCase):
         TELEGRAM_CHAT_ID='chat-id',
         ADMIN_BOOKINGS_URL='https://admin.example.com/ticket-admin/bookings',
     )
-    @patch('bookings.domain.telegram_notifications.request.urlopen')
-    def test_create_booking_sends_telegram_notification(self, mock_urlopen):
+    @patch('bookings.views.notify_new_booking_async')
+    def test_create_booking_schedules_telegram_notification(self, mock_notify_async):
         response = self.client.post(
             reverse('create-booking'),
             self._create_booking_payload([self.seat_vip.id]),
@@ -102,12 +101,7 @@ class BookingApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(mock_urlopen.call_count, 1)
-        request_obj = mock_urlopen.call_args.args[0]
-        payload = json.loads(request_obj.data.decode('utf-8'))
-        self.assertEqual(payload['chat_id'], 'chat-id')
-        self.assertIn(f'#{response.data["id"]}', payload['text'])
-        self.assertIn('https://admin.example.com/ticket-admin/bookings', payload['text'])
+        mock_notify_async.assert_called_once_with(response.data['id'])
 
     @override_settings(
         TELEGRAM_BOOKING_NOTIFICATIONS_ENABLED=True,
@@ -115,8 +109,8 @@ class BookingApiTests(APITestCase):
         TELEGRAM_CHAT_ID='chat-id',
         ADMIN_BOOKINGS_URL='https://admin.example.com/ticket-admin/bookings',
     )
-    @patch('bookings.domain.telegram_notifications.request.urlopen', side_effect=TimeoutError)
-    def test_create_booking_keeps_201_when_telegram_fails(self, mock_urlopen):
+    @patch('bookings.domain.telegram_notifications._notification_executor.submit', side_effect=TimeoutError)
+    def test_create_booking_keeps_201_when_telegram_scheduling_fails(self, mock_submit):
         response = self.client.post(
             reverse('create-booking'),
             self._create_booking_payload([self.seat_vip.id]),
@@ -124,7 +118,7 @@ class BookingApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(mock_urlopen.call_count, 1)
+        self.assertEqual(mock_submit.call_count, 1)
 
     def test_create_booking_event_not_found_contract(self):
         payload = self._create_booking_payload([self.seat_vip.id])
