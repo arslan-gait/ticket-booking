@@ -15,6 +15,7 @@ import {
 import LocalDateTime from "@/components/local-date-time";
 import SeatPicker from "@/components/seat-picker";
 import { useAppSettings } from "@/components/app-settings-provider";
+import CancelBookingDialog from "@/components/cancel-booking-dialog";
 
 export default function AdminBookingsManager() {
   const { tr } = useAppSettings();
@@ -26,6 +27,7 @@ export default function AdminBookingsManager() {
   const [nameFilter, setNameFilter] = useState("");
   const [whatsappFilter, setWhatsappFilter] = useState("");
   const [eventSeats, setEventSeats] = useState<EventSeatsResponse | null>(null);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [error, setError] = useState("");
 
   async function loadBookings() {
@@ -62,9 +64,9 @@ export default function AdminBookingsManager() {
     loadEventSeats().catch((e) => setError(toErrorMessage(e)));
   }, [eventFilter]);
 
-  async function markStatus(id: number, status: "paid" | "cancelled") {
+  async function markStatus(id: number, status: "paid" | "cancelled", commentary?: string) {
     try {
-      await updateBookingStatus(id, status);
+      await updateBookingStatus(id, status, commentary);
       await loadBookings();
       await loadEventSeats();
     } catch (e) {
@@ -72,10 +74,10 @@ export default function AdminBookingsManager() {
     }
   }
 
-  function confirmCancelBooking(id: number) {
-    const confirmed = window.confirm("Are you sure you want to cancel this booking?");
-    if (!confirmed) return;
-    markStatus(id, "cancelled").catch((e) => setError(toErrorMessage(e)));
+  async function handleCancelConfirm(commentary: string) {
+    if (cancellingId === null) return;
+    setCancellingId(null);
+    await markStatus(cancellingId, "cancelled", commentary);
   }
 
   const normalizedWhatsappFilter = whatsappFilter.replace(/\D/g, "");
@@ -196,6 +198,11 @@ export default function AdminBookingsManager() {
                 <p className="muted text-xs">
                   {tr("status")}: {getTranslatedStatus(booking.status)}
                 </p>
+                {booking.commentary && (
+                  <p className="muted text-xs">
+                    {tr("commentary")}: {booking.commentary}
+                  </p>
+                )}
               </div>
               <div className="flex gap-2">
                 <button
@@ -219,7 +226,7 @@ export default function AdminBookingsManager() {
                   disabled={isCancelled}
                   onClick={(event) => {
                     event.stopPropagation();
-                    confirmCancelBooking(booking.id);
+                    setCancellingId(booking.id);
                   }}
                 >
                   {tr("cancel")}
@@ -231,6 +238,12 @@ export default function AdminBookingsManager() {
         })}
       </div>
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
+      {cancellingId !== null && (
+        <CancelBookingDialog
+          onConfirm={handleCancelConfirm}
+          onClose={() => setCancellingId(null)}
+        />
+      )}
     </div>
   );
 }

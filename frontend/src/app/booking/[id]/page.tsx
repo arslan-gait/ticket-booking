@@ -80,7 +80,7 @@ export default async function BookingPage({
       </div>
 
       <div
-        className={`grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_auto_1fr] gap-x-4 gap-y-5 p-5 ${!isBookingPending && "border-b border-gray-200"}`}
+        className={`grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_auto_1fr] gap-x-4 gap-y-5 p-5 ${isBookingPaid && "border-b border-gray-200"}`}
       >
         <DetailRow
           icon={<UserIcon className="size-5" />}
@@ -103,6 +103,22 @@ export default async function BookingPage({
           value={place}
         />
       </div>
+
+      {isBookingCancelled && (
+        <div className="grid grid-cols-[auto_1fr] gap-3 p-5 rounded-xl bg-red-50">
+          <div className="size-12 rounded-full flex items-center justify-center shrink-0">
+            <XCircleIcon className="size-10 text-red-500" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-bold text-black">
+              {t(lang, "cause")}
+            </span>
+            <span className="text-base text-black">
+              {booking.commentary || t(lang, "unknown")}
+            </span>
+          </div>
+        </div>
+      )}
 
       {isBookingPending && (
         <div className="grid grid-cols-[auto_1fr] gap-3 p-5 rounded-xl bg-[#EEF4FF]">

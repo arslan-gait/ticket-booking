@@ -136,6 +136,7 @@ export type BookingListItem = {
   status: string;
   total_price: string;
   seat_count: number;
+  commentary: string;
   created_at: string;
 };
 
@@ -360,10 +361,10 @@ export async function getBookings(params?: { event?: number; status?: string }) 
   return res.results ?? [];
 }
 
-export async function updateBookingStatus(id: number, status: "paid" | "cancelled") {
+export async function updateBookingStatus(id: number, status: "paid" | "cancelled", commentary?: string) {
   return apiFetch(`/bookings/${id}/update-status/`, {
     method: "POST",
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, ...(commentary !== undefined ? { commentary } : {}) }),
   });
 }
 
@@ -374,6 +375,7 @@ export async function getBooking(token: string) {
     customer_name: string;
     phone_number: string;
     status: string;
+    commentary: string;
     total_price: string;
     event_name: string;
     event_image: string | null;

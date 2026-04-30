@@ -46,6 +46,9 @@ export const dictionary = {
     place: "Место проведения",
     addressLine: "Адрес",
     status: "Статус",
+    commentary: "Комментарий",
+    cause: "Причина",
+    unknown: "Неизвестно",
     manualPaymentTitle: "Инструкция по оплате",
     manualPaymentText:
       "После подтверждения брони, администратор напишет вам в WhatsApp для оплаты.",
@@ -130,6 +133,10 @@ export const dictionary = {
     seatPlace: "место",
     markPaid: "Отметить как оплачено",
     cancel: "Отменить",
+    cancelBooking: "Отменить бронь",
+    cancelCause: "Укажите причину отмены",
+    cancelCausePlaceholder: "Опишите причину...",
+    cancelCauseOther: "Другое",
     venueNameRequired: "Название площадки обязательно.",
     vip: "VIP",
     regular: "Обычные",
@@ -186,6 +193,9 @@ export const dictionary = {
     place: "Place",
     addressLine: "Address",
     status: "Status",
+    commentary: "Commentary",
+    cause: "Cause",
+    unknown: "Unknown",
     manualPaymentTitle: "Payment instructions",
     manualPaymentText:
       "After confirmation of your booking, our admin will message you on WhatsApp for payment.",
@@ -269,6 +279,10 @@ export const dictionary = {
     seatPlace: "seat",
     markPaid: "Mark paid",
     cancel: "Cancel",
+    cancelBooking: "Cancel booking",
+    cancelCause: "Select cancellation reason",
+    cancelCausePlaceholder: "Describe the reason...",
+    cancelCauseOther: "Other",
     venueNameRequired: "Venue name is required.",
     vip: "VIP",
     regular: "Regular",
@@ -320,4 +334,31 @@ export function translateBookingStatus(lang: Language, status: string): string {
   }
 
   return status;
+}
+
+const CANCEL_CAUSES: Record<Language, string[]> = {
+  ru: [
+    "Клиент сам отказался",
+    "Оплата не поступила",
+    "Техническая ошибка",
+    "Мероприятие отменено",
+    "Мероприятие перенесено",
+    "Недостоверные данные клиента",
+    "Превышено время ожидания оплаты",
+    "Другое",
+  ],
+  en: [
+    "Client cancelled",
+    "Payment not received",
+    "Technical error",
+    "Event cancelled",
+    "Event rescheduled",
+    "Invalid client details",
+    "Payment timeout exceeded",
+    "Other",
+  ],
+};
+
+export function getCancelCauses(lang: Language): string[] {
+  return CANCEL_CAUSES[lang];
 }
