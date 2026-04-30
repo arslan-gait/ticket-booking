@@ -13,6 +13,7 @@ import MapPinIcon from "@/components/icons/map-pin-icon";
 import DetailRow from "@/components/detail-row";
 import NavButton from "@/components/nav-button";
 import InfoIcon from "@/components/icons/info-icon";
+import SharePrintButtons from "@/components/share-print-buttons";
 
 type Params = { id: string };
 
@@ -43,7 +44,7 @@ export default async function BookingPage({
         />
       )}
 
-      <div className="flex items-center justify-center p-5 border-b border-gray-200">
+      <div className="relative flex items-center justify-center p-5 border-b border-gray-200">
         <div
           className={`flex items-center justify-center gap-2 w-60 h-16 rounded-3xl ${isBookingPending && "bg-amber-500/20"} ${isBookingCancelled && "bg-red-500/20"} ${isBookingPaid && "bg-emerald-600/20"}`}
         >
@@ -62,6 +63,7 @@ export default async function BookingPage({
             {translateBookingStatus(lang, booking.status)}
           </span>
         </div>
+        <SharePrintButtons />
       </div>
 
       <div className="flex items-start justify-start gap-10 p-5 border-b border-gray-200">

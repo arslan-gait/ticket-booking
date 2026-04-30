@@ -10,6 +10,7 @@ import XCircleIcon from "@/components/icons/x-circle-icon";
 import UserIcon from "@/components/icons/user-icon";
 import MapPinIcon from "@/components/icons/map-pin-icon";
 import DetailRow from "@/components/detail-row";
+import SharePrintButtons from "@/components/share-print-buttons";
 
 type Params = { id: string };
 
@@ -62,13 +63,14 @@ export default async function TicketPage({
 
   return (
     <div className="flex flex-col lg:w-240 mx-auto">
-      <div className="flex items-center justify-center p-5 border-b border-gray-200">
+      <div className="relative flex items-center justify-center p-5 border-b border-gray-200">
         <div className="flex items-center justify-center gap-2 w-60 h-16 rounded-3xl bg-emerald-600/20">
           <CheckCircleIcon className="w-10 h-10 text-emerald-600" />
           <span className="text-lg font-semibold text-emerald-600">
             {translateBookingStatus(lang, booking.status)}
           </span>
         </div>
+        <SharePrintButtons />
       </div>
 
       <div className="flex items-start justify-start gap-10 p-5 border-b border-gray-200">
@@ -150,6 +152,7 @@ export default async function TicketPage({
           <p className="text-red-400">{t(lang, "qrMissing")}</p>
         )}
       </div>
+
     </div>
   );
 }
