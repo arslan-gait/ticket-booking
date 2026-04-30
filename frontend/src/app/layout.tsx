@@ -5,7 +5,7 @@ import { getServerLanguage, getServerTheme } from "@/lib/i18n-server";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sennet Yurti",
+  title: "Sen'et Yurti",
   description: "",
   icons: {
     icon: "/icon.png",
