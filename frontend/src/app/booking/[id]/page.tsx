@@ -31,6 +31,8 @@ export default async function BookingPage({
   const isBookingPending = booking.status === "pending";
   const isBookingPaid = booking.status === "paid";
   const isBookingCancelled = booking.status === "cancelled";
+  const whatsappNumberForLink = booking.phone_number.replace(/\D/g, "");
+  const whatsappHref = `https://wa.me/${whatsappNumberForLink}`;
   const place = booking.venue_address_line
     ? `${booking.venue_name}, ${booking.venue_address_line}`
     : booking.venue_name;
@@ -92,7 +94,16 @@ export default async function BookingPage({
         <DetailRow
           icon={<WhatsappIcon className="size-8" />}
           label={t(lang, "whatsapp")}
-          value={booking.phone_number}
+          value={
+            <a
+              href={whatsappHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:no-underline"
+            >
+              {booking.phone_number}
+            </a>
+          }
         />
         <DetailRow
           icon={<CreditCardIcon className="size-5" />}
