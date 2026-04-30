@@ -1,0 +1,20 @@
+export default function CreditCardIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="48"
+      height="48"
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M2 20H46M6 8H42C44.2091 8 46 9.79086 46 12V36C46 38.2091 44.2091 40 42 40H6C3.79086 40 2 38.2091 2 36V12C2 9.79086 3.79086 8 6 8Z"
+        stroke="currentColor"
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
