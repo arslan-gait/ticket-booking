@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   getAdminEvents,
   getBookings,
@@ -20,10 +20,14 @@ import CancelBookingDialog from "@/components/cancel-booking-dialog";
 export default function AdminBookingsManager() {
   const { tr } = useAppSettings();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const bookingIdFromUrl = searchParams.get("booking_id") ?? "";
   const [bookings, setBookings] = useState<BookingListItem[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [eventFilter, setEventFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [bookingIdFilter, setBookingIdFilter] = useState(bookingIdFromUrl);
   const [nameFilter, setNameFilter] = useState("");
   const [whatsappFilter, setWhatsappFilter] = useState("");
   const [eventSeats, setEventSeats] = useState<EventSeatsResponse | null>(null);
@@ -64,6 +68,29 @@ export default function AdminBookingsManager() {
     loadEventSeats().catch((e) => setError(toErrorMessage(e)));
   }, [eventFilter]);
 
+  useEffect(() => {
+    setBookingIdFilter(bookingIdFromUrl);
+  }, [bookingIdFromUrl]);
+
+  useEffect(() => {
+    const normalizedBookingIdFilter = bookingIdFilter.trim();
+    const currentBookingIdFromUrl = searchParams.get("booking_id") ?? "";
+    if (normalizedBookingIdFilter === currentBookingIdFromUrl) {
+      return;
+    }
+
+    const nextSearchParams = new URLSearchParams(searchParams.toString());
+    if (normalizedBookingIdFilter) {
+      nextSearchParams.set("booking_id", normalizedBookingIdFilter);
+    } else {
+      nextSearchParams.delete("booking_id");
+    }
+
+    const nextQuery = nextSearchParams.toString();
+    const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
+    router.replace(nextUrl, { scroll: false });
+  }, [bookingIdFilter, pathname, router, searchParams]);
+
   async function markStatus(id: number, status: "paid" | "cancelled", commentary?: string) {
     try {
       await updateBookingStatus(id, status, commentary);
@@ -90,11 +117,14 @@ export default function AdminBookingsManager() {
     return status;
   };
   const filteredBookings = bookings.filter((booking) => {
+    const normalizedBookingIdFilter = bookingIdFilter.trim();
+    const matchesBookingId =
+      normalizedBookingIdFilter.length === 0 || String(booking.id) === normalizedBookingIdFilter;
     const matchesName = booking.customer_name.toLowerCase().includes(nameFilter.toLowerCase().trim());
     const bookingPhone = booking.phone_number.replace(/\D/g, "");
     const matchesWhatsapp =
       normalizedWhatsappFilter.length === 0 || bookingPhone.includes(normalizedWhatsappFilter);
-    return matchesName && matchesWhatsapp;
+    return matchesBookingId && matchesName && matchesWhatsapp;
   });
 
   return (
@@ -147,6 +177,15 @@ export default function AdminBookingsManager() {
           className="input-field w-44"
           value={whatsappFilter}
           onChange={(e) => setWhatsappFilter(e.target.value)}
+        />
+        <label htmlFor="booking-id-filter" className="text-sm">
+          ID:
+        </label>
+        <input
+          id="booking-id-filter"
+          className="input-field w-32"
+          value={bookingIdFilter}
+          onChange={(e) => setBookingIdFilter(e.target.value)}
         />
       </div>
       {eventSeats ? (

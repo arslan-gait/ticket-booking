@@ -1,11 +1,12 @@
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from urllib import error, request
+from urllib import error, parse, request
 
 from django.conf import settings
 
 from .constants import (
+    BOOKING_ID_KEY,
     TELEGRAM_ADMIN_LINK_LABEL,
     TELEGRAM_BOOKING_ID_LABEL,
     TELEGRAM_CUSTOMER_LABEL,
@@ -96,7 +97,24 @@ def _build_booking_message_text(booking):
         f'{TELEGRAM_TOTAL_PRICE_LABEL}: {booking.total_price}',
     ]
     if settings.ADMIN_BOOKINGS_URL:
+        admin_bookings_url = _build_admin_bookings_url(settings.ADMIN_BOOKINGS_URL, booking.id)
         lines.append(
-            f'{TELEGRAM_ADMIN_LINK_LABEL}: <a href="{settings.ADMIN_BOOKINGS_URL}">{settings.ADMIN_BOOKINGS_URL}</a>'
+            f'{TELEGRAM_ADMIN_LINK_LABEL}: <a href="{admin_bookings_url}">{admin_bookings_url}</a>'
         )
     return '\n'.join(lines)
+
+
+def _build_admin_bookings_url(base_url, booking_id):
+    parsed_url = parse.urlsplit(base_url)
+    query_params = parse.parse_qsl(parsed_url.query, keep_blank_values=True)
+    query_params.append((BOOKING_ID_KEY, str(booking_id)))
+    updated_query = parse.urlencode(query_params)
+    return parse.urlunsplit(
+        (
+            parsed_url.scheme,
+            parsed_url.netloc,
+            parsed_url.path,
+            updated_query,
+            parsed_url.fragment,
+        )
+    )
